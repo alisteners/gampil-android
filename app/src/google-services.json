@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "668734083613",
+    "project_id": "aplikasi-pengaduan-c0afc",
+    "storage_bucket": "aplikasi-pengaduan-c0afc.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:668734083613:android:c5a16a58fa81e340e0ecf4",
+        "android_client_info": {
+          "package_name": "com.alisteners.pengaduan"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAlpdVSyQeaMxdoO00p2UH9tZWrCR-noR4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

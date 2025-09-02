@@ -1,0 +1,163 @@
+<resources>
+    <string name="app_name">GAMPIL</string>
+    <string name="kembali">Kembali</string>
+    <string name="tulis_detail_pengaduan">Tulis Detail Pengaduan</string>
+    <string name="bukti_kondisi_foto">Bukti Kondisi (Foto)</string>
+    <string name="foto_bukti_kondisi">Foto Bukti Kondisi</string>
+    <string name="ambil_ulang_foto">Ambil Ulang Foto</string>
+    <string name="lokasi_laporan">Lokasi</string>
+    <string name="lokasi_otomatis_dari_gps">Lokasi Otomatis (dari GPS)</string>
+    <string name="hint_lokasi_otomatis_mencari">Mencari Lokasi Otomatis…</string>
+    <string name="detail_lokasi_patokan_jalan">Detail Lokasi / Patokan Jalan</string>
+    <string name="hint_patokan_contoh">Contoh : Depan Masjid Al-Ikhlas</string>
+    <string name="kategori_pengaduan">Kategori Pengaduan</string>
+    <string name="deskripsi_kerusakan">Deskripsi Kerusakan</string>
+    <string name="deskripsikan_kerusakannya">Deskripsikan Kerusakannya..</string>
+    <string name="pernyataan_label">Pernyataan</string>
+    <string name="pernyataan_isi">Saya menyatakan bahwa pengaduan ini benar dan dapat dipertanggungjawabkan.</string>
+    <string name="ya_saya_setuju">Ya, saya setuju.</string>
+    <string name="kirim_pengaduan">Kirim Pengaduan</string>
+    <string name="logo_aplikasi">Logo Aplikasi</string>
+    <string name="username_email">Email</string>
+    <string name="masukkan_username_atau_email">Masukkan Email</string>
+    <string name="password">Password</string>
+    <string name="masukkan_password">Masukkan Password</string>
+    <string name="login">Login</string>
+    <string name="belum_punya_akun_register">Belum Punya Akun? Register</string>
+    <string name="lupa_password">Lupa Password?</string>
+    <string name="selamat_datang">Selamat Datang!</string>
+    <string name="register">DAFTAR</string>
+    <string name="alamat">Alamat</string>
+    <string name="email">Email</string>
+    <string name="nama_lengkap">Nama Lengkap</string>
+    <string name="nomor_hp">Nomor HP</string>
+    <string name="passwordd">Password</string>
+    <string name="konfirmasi_password">Konfirmasi Password</string>
+    <string name="username_opsional">Username (opsional)</string>
+    <string name="logo_aplikasii">Logo Aplikasi</string>
+    <string name="form_registrasi">Buat Akun dan Laporkan Kerusakan Infrastruktur Desa Bandorasa Wetan</string>
+    <string name="refresh_lokasi">refresh_lokasi</string>
+    <string name="memperbarui_lokasi">Memperbarui Lokasi</string>
+    <string name="izin_lokasi_ditolak">Izin Lokasi Ditolak!</string>
+    <string name="izin_lokasi_diperlukan">Izin Lokasi Diperlukan!</string>
+    <string name="gagal_mendapatkan_lokasi_gps_pastikan_aktif">Gagal Mendapatkan Lokasi Pastikan GPS Aktif</string>
+    <string name="gagal_mendapatkan_lokasi_gps">Gagal Mendapatkan Lokasi GPS</string>
+    <string name="error_mendapatkan_lokasi">Error Mendapatkan Lokasi</string>
+    <string name="error_mendapatkan_lokasi_gps">Mendapatkan Lokasi GPS</string>
+    <string name="layanan_alamat_tidak_tersedia">Layanan Alamat Tidak Tersedia</string>
+    <string name="alamat_tidak_dapat_ditentukan">Alamat Tidak Dapat Ditentukan</string>
+    <string name="tidak_bisa_mengambil_nama_alamat_cek_internet">Tidak Bisa Mengambil Alamat, Cek Internet!</string>
+    <string name="gagal_memuat_kategori">Gagal Memuat Kategori</string>
+    <string name="foto_bukti_wajib">Foto Bukti Wajib</string>
+    <string name="kategori_harus_dipilih">Kategori Harus Dipilih</string>
+    <string name="error_detail_lokasi_kosong">Error Detail Lokasi Kosong</string>
+    <string name="error_deskripsi_kosong">Error Deskripsi Kosong</string>
+    <string name="error_pernyataan_belum_disetujui">Pernyataan Belum Disetujui</string>
+    <string name="error_sesi_tidak_valid">Sesi Tidak Valid</string>
+    <string name="error_memproses_gambar_resize">Error Memproses Gambar Resize</string>
+    <string name="error_konversi_grayscale">Error Konversi Grayscale</string>
+    <string name="error_kompresi_gambar">Error Kompresi Gambar</string>
+    <string name="daftar_pengaduan_masuk">Daftar Pengaduan Masuk</string>
+    <string name="dashboard_operator_desa">Dashboard Operator Desa</string>
+    <string name="diproses_0">Diproses: 0</string>
+    <string name="selesai_0">Selesai: 0</string>
+    <string name="menunggu_0">Menunggu: 0</string>
+    <string name="selamat_datang_nama_operator">Selamat Datang, [Nama Operator]</string>
+    <string name="gagal_memproses_orientasi_gambar">Gagal Memproses Orientasi Gambar</string>
+    <string name="gagal_memproses_berkas_foto">Gagal Memproses Berkas Foto</string>
+    <string name="gagal_memuat_gambar">Gagal Memuat Gambar</string>
+    <string name="tidak_ada_izin_akses_gambar">Tidak Ada Izin Akses Gambar</string>
+    <string name="gambar_terlalu_besar_oom">Gambar Terlalu Besar (OOM)</string>
+    <string name="uri_foto_tidak_valid">URI Foto Tidak Valid</string>
+    <string name="tidak_ada_foto_diterima">Tidak Ada Foto Diterima</string>
+    <string name="izin_lokasi_ditolak_tidak_bisa_otomatis">Izin Lokasi DitolaK, Tidak Bisa Otomatis!</string>
+    <string name="error_menyimpan_rle_ke_file">Error Menyimpan RLE ke File</string>
+    <string name="error_quantisasi_gambar">Error Quantisasi Gambar</string>
+    <string name="title_riwayat_pengaduan">Riwayat Pengaduan</string>
+    <string name="pesan_riwayat_kosong">Belum Ada Riwayat Pengaduan, Yuk Buat Pengaduan!</string>
+    <string name="deskripsi_ikon_pesan_riwayat">Belum Ada Riwayat Pengaduan, Ayoo Buat Pengaduan!</string>
+    <string name="foto_bukti_pengaduan">Foto Bukti Pengaduan</string>
+    <string name="lokasi">Lokasi</string>
+    <string name="deskripsi">Deskripsi Pengaduan</string>
+    <string name="data_teknis">Data Teknis</string>
+    <string name="tindak_lanjut_dari_operator">Tindak Lanjut dari Operator</string>
+    <string name="title_detail_pengaduan">Detail Pengaduan</string>
+    <string name="format_ukuran_asli">Ukuran Asli : %s </string>
+    <string name="format_ukuran_resize">Ukuran Setelah Resize : %s </string>
+    <string name="format_ukuran_grayscale">Ukuran Grayscale : %s </string>
+    <string name="format_ukuran_rle">Ukuran Setelah Kompresi : %s </string>
+    <string name="status_pengaduan">Status pengaduan</string>
+    <string name="tutup">Tutup</string>
+    <string name="title_profil">Profil</string>
+    <string name="logout">LOGOUT</string>
+    <string name="todo">TODO</string>
+    <string name="TODO">TODO</string>
+    <string name="informasi_kontak">Informasi Kontak</string>
+    <string name="title_laporan_publik">Pengaduan Publik</string>
+    <string name="pesan_tidak_ada_laporan_publik">Tidak Ada Pengaduan Publik</string>
+    <string name="coba_lagi">Coba Lagi</string>
+    <string name="title_buat_pengaduan">Buat Pengaduan</string>
+    <string name="dashboard">Dashboard</string>
+    <string name="profil">Profil</string>
+    <string name="rekap">Rekap</string>
+    <string name="cari">Cari</string>
+    <string name="tidak_ada_notifikasi">Tidak Ada Notifikasi Baru.</string>
+    <string name="pesan_tidak_ada_laporan_publik_filter">Belum Ada Pengaduan Publik</string>
+    <string name="tindak_lanjut_pemerintah_desa">Tindak Lanjut Pemerintah Desa</string>
+    <string name="foto_bukti_tindak_lanjut">Foto Bukti Tindak Lanjut :</string>
+    <string name="analisis_kompresi">Analisis Kompresi</string>
+    <string name="ukuran_asli">Ukuran Sebelum Kompresi :</string>
+    <string name="ukuran_setelah_resize">Ukuran Ekstraksi JPEG :</string>
+    <string name="ukuran_grayscale">Ukuran Grayscale :</string>
+    <string name="ukuran_hasil_rle">Ukuran Setelah Kompresi RLE :</string>
+    <string name="compression_ratio">Compression Ratio :</string>
+    <string name="space_saving">Space Saving :</string>
+    <string name="foto_detail_operator">Foto Detail Operator</string>
+    <string name="deskripsi_pengaduan">Deskripsi Pengaduan</string>
+    <string name="lokasi_detail_op">Lokasi</string>
+    <string name="riwayat_tindak_lanjut_terakhir">Riwayat Tindak Lanjut Terakhir</string>
+    <string name="aksi_baru">Aksi Baru</string>
+    <string name="pilih_status_baru_untuk_laporan_ini">Pilih status baru untuk pengaduan ini :</string>
+    <string name="lampirkan_foto_bukti_baru_bisa_lebih_dari_satu">Lampirkan Foto Bukti Baru (Bisa lebih dari satu)</string>
+    <string name="hapus_pengaduan">Hapus Pengaduan</string>
+    <string name="pilih_foto_dari_galeri">Pilih Foto dari Galeri</string>
+    <string name="simpan_perubahan">Simpan Perubahan</string>
+    <string name="diproses">Diproses</string>
+    <string name="selesai">Selesai</string>
+    <string name="daftar_foto_bukti_tindak_lanjut_yang_dipilih">Daftar foto bukti tindak lanjut yang dipilih</string>
+    <string name="catatan_tindak_lanjut_wajib">Catatan Tindak Lanjut (Wajib)</string>
+    <string name="belum_ada_tindak_lanjut_sebelumnya">Belum ada tindak lanjut sebelumnya.</string>
+
+    <string-array name="kategori_pengaduan_array">
+        <item>Pilih Kategori…</item>
+        <item>Arus Lalu Lintas</item>
+        <item>Banjir</item>
+        <item>Fasilitas Kesehatan</item>
+        <item>Fasilitas Olahraga</item>
+        <item>Fasilitas Umum</item>
+        <item>Gedung Sekolah</item>
+        <item>Iklan Rokok</item>
+        <item>Jalan</item>
+        <item>Jaringan Air Bersih</item>
+        <item>Jaringan Komunikasi</item>
+        <item>Jaringan Listrik</item>
+        <item>Jembatan</item>
+        <item>Keluhan Galian/Sisa Proyek</item>
+        <item>Parkir Liar</item>
+        <item>Pencemaran Lingkungan</item>
+        <item>PKL Liar</item>
+        <item>Pohon</item>
+        <item>Reklame</item>
+        <item>Saluran Air</item>
+        <item>Sampah</item>
+        <item>Sanitasi</item>
+        <item>Taman</item>
+        <item>Tempat Hiburan</item>
+        <item>Tempat Ibadah</item>
+        <item>Tempat Wisata</item>
+        <item>TPU</item>
+        <item>Transportasi Publik</item>
+        <item>Trotoar</item>
+        <item>Lainnya</item>
+    </string-array>
+</resources>

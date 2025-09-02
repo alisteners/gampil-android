@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    style="?attr/materialCardViewOutlinedStyle"
+    app:cardBackgroundColor="@color/app_aksen"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    app:cardUseCompatPadding="true"
+    android:layout_marginStart="8dp"
+    android:layout_marginEnd="8dp"
+    android:layout_marginTop="8dp"
+    android:layout_marginBottom="8dp"
+    app:cardElevation="2dp">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <com.google.android.material.imageview.ShapeableImageView
+            android:id="@+id/imageViewPublikThumbnail"
+            android:layout_width="120dp"
+            android:layout_height="0dp"
+            android:scaleType="centerCrop"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:shapeAppearanceOverlay="@style/ShapeAppearance.App.ImageLeftRounded"
+            tools:ignore="ImageContrastCheck"
+            tools:src="@tools:sample/backgrounds/scenic" />
+
+        <TextView
+            android:id="@+id/textViewPublikKategori"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginTop="16dp"
+            android:layout_marginEnd="16dp"
+            android:textAppearance="?attr/textAppearanceBody1"
+            android:textStyle="bold"
+            android:maxLines="2"
+            android:ellipsize="end"
+            app:layout_constraintStart_toEndOf="@id/imageViewPublikThumbnail"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            tools:text="Fasilitas Umum Rusak Parah Sekali"/>
+
+        <TextView
+            android:id="@+id/textViewPublikTanggal"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:drawablePadding="8dp"
+            android:gravity="center_vertical"
+            android:textAppearance="?attr/textAppearanceCaption"
+            app:drawableStartCompat="@drawable/ic_calendar_today"
+            app:drawableTint="?android:attr/textColorSecondary"
+            app:layout_constraintStart_toStartOf="@id/textViewPublikKategori"
+            app:layout_constraintTop_toBottomOf="@id/textViewPublikKategori"
+            tools:ignore="TextContrastCheck"
+            tools:text="08 Jun 2025" />
+
+        <TextView
+            android:id="@+id/labelStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Status :"
+            android:textAppearance="?attr/textAppearanceBody2"
+            android:layout_marginTop="8dp"
+            app:layout_constraintStart_toStartOf="@id/textViewPublikTanggal"
+            app:layout_constraintTop_toBottomOf="@id/textViewPublikTanggal"
+            tools:ignore="HardcodedText" />
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipPublikStatus"
+            style="@style/Widget.Material3.Chip.Assist.Elevated"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:layout_marginStart="8dp"
+            android:clickable="false"
+            android:textAlignment="center"
+            android:textAppearance="?attr/textAppearanceBody2"
+            app:chipIconVisible="true"
+            app:layout_constraintStart_toEndOf="@id/labelStatus"
+            app:layout_constraintBaseline_toBaselineOf="@id/labelStatus"
+            tools:text="Selesai"/>
+
+        <TextView
+            android:id="@+id/textViewPublikNamaPelapor"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:textAppearance="?attr/textAppearanceCaption"
+            android:textStyle="italic"
+            app:layout_constraintEnd_toEndOf="@id/textViewPublikKategori"
+            app:layout_constraintStart_toStartOf="@id/labelStatus"
+            app:layout_constraintTop_toBottomOf="@id/chipPublikStatus"
+            tools:ignore="TextContrastCheck"
+            tools:text="Dilaporkan oleh Ridho" />
+
+        <TextView
+            android:id="@+id/textViewPublikDeskripsi"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="16dp"
+            android:drawablePadding="8dp"
+            android:ellipsize="end"
+            android:gravity="center_vertical"
+            android:maxLines="5"
+            android:textAppearance="?attr/textAppearanceBody2"
+            android:textColor="?android:attr/textColorSecondary"
+            app:drawableStartCompat="@drawable/ic_notes"
+            app:drawableTint="?android:attr/textColorSecondary"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="@id/textViewPublikNamaPelapor"
+            app:layout_constraintStart_toStartOf="@id/textViewPublikNamaPelapor"
+            app:layout_constraintTop_toBottomOf="@id/textViewPublikNamaPelapor"
+            tools:ignore="TextContrastCheck"
+            tools:text="Lampu jalan di depan rumah saya mati sudah 3 hari, sangat gelap dan..." />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</com.google.android.material.card.MaterialCardView>

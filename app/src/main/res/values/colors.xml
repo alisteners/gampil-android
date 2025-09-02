@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="grey">#A4A4A4</color>
+    <color name="notif_unread_bg">#E8EAF6</color>
+
+    <color name="app_primer">#FF62676B</color>
+    <color name="app_primer_varian">#FF373C3F</color>
+    <color name="app_on_primer">@color/white</color>
+    <color name="app_sekunder">#FFA5A5A5</color>
+    <color name="app_on_sekunder">@color/black</color>
+    <color name="app_aksen">#fff3edf7</color>
+    <color name="app_on_aksen">@color/black</color>
+    <color name="app_latar">#FFF5F5F5</color>
+    <color name="app_surface">@color/white</color>
+    <color name="app_on_surface">@color/black</color>
+    <color name="app_on_latar">@color/black</color>
+    <color name="app_error">#B00020</color>
+    <color name="app_on_error">@color/white</color>
+
+
+    <color name="text_utama">#DE000000</color>
+    <color name="text_sekunder">#8A000000</color>
+    <color name="text_disabled">#61000000</color>
+
+    <color name="status_menunggu">#FFA500</color>
+    <color name="status_diproses">#1E90FF</color>
+    <color name="status_selesai">#32CD32</color>
+    <color name="status_menunggu_bg">#FFF8E1</color>
+    <color name="status_menunggu_text">#FFA000</color>
+    <color name="status_menunggu_icon">#FFA000</color>
+    <color name="status_diproses_bg">#E3F2FD</color>
+    <color name="status_diproses_text">#1976D2</color>
+    <color name="status_diproses_icon">#1976D2</color>
+    <color name="status_selesai_bg">#E8F5E9</color>
+    <color name="status_selesai_text">#388E3C</color>
+    <color name="status_selesai_icon">#388E3C</color>
+
+</resources>

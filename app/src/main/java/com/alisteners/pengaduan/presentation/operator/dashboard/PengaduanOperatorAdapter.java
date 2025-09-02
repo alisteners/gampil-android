@@ -1,0 +1,166 @@
+package com.alisteners.pengaduan.presentation.operator.dashboard;
+
+import android.annotation.SuppressLint;
+import android.content.Context;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.ImageView;
+import android.widget.TextView;
+
+import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.RecyclerView;
+
+import com.alisteners.pengaduan.R;
+import com.alisteners.pengaduan.data.remote.config.ApiConfig;
+import com.alisteners.pengaduan.domain.entity.PengaduanPublikItem;
+import com.alisteners.pengaduan.util.StringUtils;
+
+import com.bumptech.glide.Glide;
+
+import com.google.android.material.chip.Chip;
+
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.List;
+import java.util.Locale;
+
+public class PengaduanOperatorAdapter extends RecyclerView.Adapter<PengaduanOperatorAdapter.PengaduanPublikViewHolder> {
+    private final List<PengaduanPublikItem> pengaduanItems;
+    private final Context context;
+    private OnItemClickListener listener;
+
+    public interface OnItemClickListener {
+        void onItemClick(PengaduanPublikItem item);
+    }
+
+    public PengaduanOperatorAdapter(List<PengaduanPublikItem> pengaduanItems, Context context) {
+        this.pengaduanItems = pengaduanItems;
+        this.context = context;
+    }
+
+    public void setOnItemClickListener(OnItemClickListener listener) {
+        this.listener = listener;
+    }
+
+    @NonNull
+    @Override
+    public PengaduanPublikViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_pengaduan_publik, parent, false);
+        return new PengaduanPublikViewHolder(view);
+    }
+
+    @Override
+    public void onBindViewHolder(@NonNull PengaduanPublikViewHolder holder, int position) {
+        PengaduanPublikItem item = pengaduanItems.get(position);
+        holder.bind(item, listener);
+    }
+
+    @Override
+    public int getItemCount() {
+        return pengaduanItems != null ? pengaduanItems.size() : 0;
+    }
+
+    @SuppressLint("NotifyDataSetChanged")
+    public void updateData(List<PengaduanPublikItem> newItems) {
+        pengaduanItems.clear();
+        if (newItems != null) {
+            pengaduanItems.addAll(newItems);
+        }
+        notifyDataSetChanged();
+    }
+
+    class PengaduanPublikViewHolder extends RecyclerView.ViewHolder {
+        ImageView imageViewThumbnail;
+        TextView textViewKategori, textViewTanggal, textViewNamaPelapor, textViewDeskripsi;
+        Chip chipStatus;
+
+        public PengaduanPublikViewHolder(@NonNull View itemView) {
+            super(itemView);
+            imageViewThumbnail = itemView.findViewById(R.id.imageViewPublikThumbnail);
+            textViewKategori = itemView.findViewById(R.id.textViewPublikKategori);
+            textViewTanggal = itemView.findViewById(R.id.textViewPublikTanggal);
+            textViewNamaPelapor = itemView.findViewById(R.id.textViewPublikNamaPelapor);
+            textViewDeskripsi = itemView.findViewById(R.id.textViewPublikDeskripsi);
+            chipStatus = itemView.findViewById(R.id.chipPublikStatus);
+        }
+
+        void bind(final PengaduanPublikItem item, final OnItemClickListener listener) {
+            textViewKategori.setText(item.getKategori());
+            textViewTanggal.setText(formatTanggal(item.getTanggalPengaduan()));
+            textViewNamaPelapor.setText(item.getNamaPelapor());
+            textViewDeskripsi.setText(item.getDeskripsiSingkat());
+
+            // Panggil metode untuk setup Chip
+            setupChipStatus(item.getStatus());
+
+            // Muat gambar thumbnail dengan Glide
+            if (item.getPathImage() != null && !item.getPathImage().isEmpty()) {
+                String imageUrl = ApiConfig.BASE_URL + item.getPathImage();
+
+                Glide.with(context)
+                        .load(imageUrl)
+                        .placeholder(R.drawable.ic_image_placeholder)
+                        .error(R.drawable.ic_image_error)
+                        .into(imageViewThumbnail);
+            } else {
+                // Set gambar default jika tidak ada path gambar
+                imageViewThumbnail.setImageResource(R.drawable.ic_image_placeholder);
+            }
+
+            // Set listener untuk seluruh item view
+            itemView.setOnClickListener(v -> {
+                if (listener != null) {
+                    int position = getAdapterPosition();
+                    if (position != RecyclerView.NO_POSITION) {
+                        listener.onItemClick(pengaduanItems.get(position));
+                    }
+                }
+            });
+        }
+
+        private String formatTanggal(String tanggalMySQL) {
+            if (tanggalMySQL == null) return "";
+            SimpleDateFormat inputFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
+            SimpleDateFormat outputFormat = new SimpleDateFormat("dd MMMM yyyy", new Locale("id", "ID"));
+            try {
+                Date date = inputFormat.parse(tanggalMySQL);
+                return (date != null) ? outputFormat.format(date) : tanggalMySQL;
+            } catch (ParseException e) {
+                return tanggalMySQL;
+            }
+        }
+
+        private void setupChipStatus(String status) {
+            if (status == null) {
+                chipStatus.setVisibility(View.GONE);
+                return;
+            }
+            chipStatus.setVisibility(View.VISIBLE);
+
+            chipStatus.setText(StringUtils.capitalizeFirstLetter(status));
+
+            int backgroundColorRes;
+            int iconRes = switch (status.toLowerCase()) {
+                case "diproses" -> {
+                    backgroundColorRes = R.color.status_diproses_bg;
+                    yield R.drawable.ic_status_diproses;
+                }
+                case "selesai" -> {
+                    backgroundColorRes = R.color.status_selesai_bg;
+                    yield R.drawable.ic_status_selesai;
+                }
+                default -> {
+                    backgroundColorRes = R.color.status_menunggu_bg;
+                    yield R.drawable.ic_status_menunggu;
+                }
+            };
+
+            chipStatus.setChipBackgroundColorResource(backgroundColorRes);
+            if (iconRes != 0) {
+                chipStatus.setChipIconResource(iconRes);
+            }
+        }
+    }
+}

@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-feature
+        android:name="android.hardware.camera"
+        android:required="false" />
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28"/>
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32"/>
+
+
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="geo" />
+        </intent>
+        <package android:name="com.google.android.apps.maps" />
+    </queries>
+
+    <application
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.Pengaduan"
+        android:usesCleartextTraffic="true"
+        tools:targetApi="31">
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
+        <activity
+            android:name=".presentation.splash.SplashActivity"
+            android:exported="true"
+            android:theme="@style/Theme.App.FullScreen">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".presentation.login.LoginActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".presentation.register.RegisterActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:windowSoftInputMode="adjustPan"/>
+
+        <activity
+            android:name=".presentation.operator.dashboard.OperatorDashboardActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".presentation.masyarakat.lapor.BuatPengaduanActivity"
+            android:exported="false"
+            android:label="@string/title_buat_pengaduan"
+            android:parentActivityName=".MainActivity" />
+
+        <activity
+            android:name=".presentation.masyarakat.detailpengaduan.DetailPengaduanActivity"
+            android:exported="false"
+            android:label="@string/title_detail_pengaduan"
+            android:parentActivityName=".MainActivity" />
+
+        <activity
+            android:name=".presentation.fullscreenimage.FullScreenImageActivity"
+            android:exported="false"
+            android:theme="@style/Theme.AppCompat.NoActionBar.FullScreen" />
+
+        <activity
+            android:name=".presentation.operator.detail.DetailPengaduanOperatorActivity"
+            android:exported="false"
+            android:label="Tindak Lanjut Laporan"
+            android:parentActivityName=".presentation.operator.dashboard.OperatorDashboardActivity">
+            <meta-data
+            android:name="android.support.PARENT_ACTIVITY"
+            android:value=".presentation.operator.dashboard.OperatorDashboardActivity" />
+        </activity>
+
+        <activity
+            android:name=".presentation.masyarakat.profil.UbahPasswordActivity"
+            android:exported="false"
+            android:label="Ubah Password"
+            android:parentActivityName=".MainActivity" />
+
+        <activity
+            android:name="com.canhub.cropper.CropImageActivity"
+            android:theme="@style/Base.Theme.AppCompat" />
+    </application>
+
+</manifest>
