@@ -67,7 +67,7 @@ public class PengaduanRepositoryImpl implements PengaduanRepository, OperatorRep
         params.put("rasioKompresiStandar", RequestBody.create(MediaType.parse("text/plain"), String.format(Locale.US, "%.2f", dataPengaduan.rasioKompresiStandar)));
         params.put("waktuProsesGambarMs", RequestBody.create(MediaType.parse("text/plain"), String.valueOf(dataPengaduan.waktuProsesGambarMs)));
 
-        RequestBody requestFileRle = RequestBody.create(MediaType.parse("text/plain"), fileRle);
+        RequestBody requestFileRle = RequestBody.create(MediaType.parse("application/octet-stream"), fileRle); // <--- UBAH BARIS INI
         MultipartBody.Part fileRlePart = MultipartBody.Part.createFormData("fileRLE", fileRle.getName(), requestFileRle);
 
         RequestBody requestFileThumbnail = RequestBody.create(MediaType.parse("image/jpeg"), fileThumbnail);

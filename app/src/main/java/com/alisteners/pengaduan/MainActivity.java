@@ -155,10 +155,10 @@ public class MainActivity extends AppCompatActivity {
                 selectedFragment = new ProfilFragment();
             } else if (itemId == R.id.nav_lapor) {
                 // Untuk Pilih Dari Galeri
-                // tampilkanDialogPilihGambar();
-                if (checkAndRequestCameraPermission()) {
-                    bukaKameraInternal();
-                }
+                tampilkanDialogPilihGambar();
+//                if (checkAndRequestCameraPermission()) {
+//                    bukaKameraInternal();
+//                }
                 return false;
             } else if (itemId == R.id.nav_notifikasi) {
                 selectedFragment = new NotifikasiFragment();
