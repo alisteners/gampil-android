@@ -363,6 +363,153 @@
                         android:textAppearance="?attr/textAppearanceCaption"
                         tools:text="Waktu Proses : 3147 ms (3.15 detik)"/>
 
+                    <LinearLayout
+                        android:id="@+id/layout_info_tambahan"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp"
+                        android:orientation="vertical"
+                        android:visibility="gone"
+                        tools:visibility="visible">
+
+                        <com.google.android.material.divider.MaterialDivider
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:layout_marginBottom="8dp"/>
+
+                        <TextView
+                            android:textAppearance="?attr/textAppearanceBody1"
+                            android:textStyle="bold"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="8dp"
+                            android:text="Perbandingan Rasio Kompresi"
+                            tools:ignore="HardcodedText" />
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:layout_marginBottom="4dp">
+                            <TextView
+                                android:text="Rasio (RLE vs Ukuran Asli)"
+                                android:layout_width="0dp"
+                                android:layout_weight="1"
+                                android:layout_height="wrap_content"
+                                android:textAppearance="?attr/textAppearanceBody2"
+                                tools:ignore="HardcodedText" />
+                            <TextView
+                                android:id="@+id/textViewRasioVsAsli"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:textStyle="bold"
+                                tools:text="22.45 %"/>
+                        </LinearLayout>
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:layout_marginBottom="12dp">
+                            <TextView
+                                android:text="↳ Hemat Ruang (Space Saving)"
+                                android:layout_width="0dp"
+                                android:layout_weight="1"
+                                android:layout_height="wrap_content"
+                                android:textAppearance="?attr/textAppearanceCaption"
+                                tools:ignore="HardcodedText" />
+                            <TextView
+                                android:id="@+id/textViewSpaceSavingVsAsli"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:textStyle="bold"
+                                android:textAppearance="?attr/textAppearanceCaption"
+                                tools:text="77.55 %"/>
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:layout_marginBottom="4dp">
+                            <TextView
+                                android:text="Rasio (RLE vs Ukuran Resize/Ekstraksi)"
+                                android:layout_width="0dp"
+                                android:layout_weight="1"
+                                android:layout_height="wrap_content"
+                                android:textAppearance="?attr/textAppearanceBody2"
+                                tools:ignore="HardcodedText" />
+                            <TextView
+                                android:id="@+id/textViewRasioVsResize"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:textStyle="bold"
+                                tools:text="22.50 %"/>
+                        </LinearLayout>
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:layout_marginBottom="12dp">
+                            <TextView
+                                android:text="↳ Hemat Ruang (Space Saving)"
+                                android:layout_width="0dp"
+                                android:layout_weight="1"
+                                android:layout_height="wrap_content"
+                                android:textAppearance="?attr/textAppearanceCaption"
+                                tools:ignore="HardcodedText" />
+                            <TextView
+                                android:id="@+id/textViewSpaceSavingVsResize"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:textStyle="bold"
+                                android:textAppearance="?attr/textAppearanceCaption"
+                                tools:text="77.50 %"/>
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:layout_marginBottom="4dp">
+                            <TextView
+                                android:text="Rasio (RLE vs Ukuran Grayscale)"
+                                android:layout_width="0dp"
+                                android:layout_weight="1"
+                                android:layout_height="wrap_content"
+                                android:textAppearance="?attr/textAppearanceBody2"
+                                tools:ignore="HardcodedText" />
+                            <TextView
+                                android:id="@+id/textViewRasioVsGrayscale"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:textStyle="bold"
+                                tools:text="87.90 %"/>
+                        </LinearLayout>
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal">
+                            <TextView
+                                android:text="↳ Hemat Ruang (Space Saving)"
+                                android:layout_width="0dp"
+                                android:layout_weight="1"
+                                android:layout_height="wrap_content"
+                                android:textAppearance="?attr/textAppearanceCaption"
+                                tools:ignore="HardcodedText" />
+                            <TextView
+                                android:id="@+id/textViewSpaceSavingVsGrayscale"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:textStyle="bold"
+                                android:textAppearance="?attr/textAppearanceCaption"
+                                tools:text="12.10 %"/>
+                        </LinearLayout>
+
+                    </LinearLayout>
+
+
+
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
