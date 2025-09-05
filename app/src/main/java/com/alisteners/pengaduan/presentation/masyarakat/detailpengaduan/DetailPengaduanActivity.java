@@ -58,26 +58,21 @@ public class DetailPengaduanActivity extends AppCompatActivity {
     private CollapsingToolbarLayout collapsingToolbar;
     private TextView textViewDetailKategori, textViewDetailTanggal, textViewDetailLokasi, textViewDetailDeskripsi;
     private Chip chipDetailStatus;
-    private TextView textViewDetailDimensi,
-            textViewDetailUkuranAsli,
-            textViewDetailUkuranResize,
-            textViewDetailUkuranGrayscale,
-            textViewDetailUkuranRle,
-            textViewDetailRasioHemat,
-            textViewDetailRasioStandar,
-            textViewDetailWaktu;
-
+    private TextView textViewDetailDimensi, textViewDetailUkuranAsli,
+            textViewDetailUkuranResize, textViewDetailUkuranGrayscale,
+            textViewDetailUkuranRle, textViewDetailRasioHemat,
+            textViewDetailRasioStandar, textViewDetailWaktu;
+    private TextView textViewRasioVsAsli, textViewRasioVsResize, textViewRasioVsGrayscale;
+    private TextView textViewSpaceSavingVsAsli, textViewSpaceSavingVsResize, textViewSpaceSavingVsGrayscale;
     // --- Deklarasi untuk Timeline ---
     private RecyclerView recyclerViewLogStatus;
     private LogStatusAdapter logStatusAdapter;
 
-    // --- TAMBAHKAN VARIABEL-VARIABEL INI ---
     private com.google.android.material.card.MaterialCardView cardViewAnalisis;
-    private LinearLayout layoutDimensi, layoutUkuranResize, layoutUkuranGrayscale;
+    private LinearLayout layoutDimensi, layoutUkuranResize, layoutUkuranGrayscale, layoutInfoTambahan;
     private int tapCount = 0;
     private final Handler tapHandler = new Handler(Looper.getMainLooper());
     private final Runnable tapResetRunnable = () -> tapCount = 0;
-    // --- AKHIR TAMBAHAN ---
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -90,7 +85,6 @@ public class DetailPengaduanActivity extends AppCompatActivity {
         setupRecyclerView();
         observeViewModel();
 
-        // --- TAMBAHKAN BLOK KODE INI ---
         cardViewAnalisis.setOnClickListener(v -> {
             tapHandler.removeCallbacks(tapResetRunnable);
             tapCount++;
@@ -101,11 +95,11 @@ public class DetailPengaduanActivity extends AppCompatActivity {
                 layoutDimensi.setVisibility(newVisibility);
                 layoutUkuranResize.setVisibility(newVisibility);
                 layoutUkuranGrayscale.setVisibility(newVisibility);
+                layoutInfoTambahan.setVisibility(newVisibility);
                 tapCount = 0; // Reset
             }
             tapHandler.postDelayed(tapResetRunnable, 1000); // Reset dalam 1 detik
         });
-        // --- AKHIR TAMBAHAN ---
 
         int idPengaduan = getIntent().getIntExtra(EXTRA_PENGADUAN_ID, -1);
         if (idPengaduan != -1) {
@@ -142,7 +136,13 @@ public class DetailPengaduanActivity extends AppCompatActivity {
         layoutDimensi = findViewById(R.id.layout_dimensi);
         layoutUkuranResize = findViewById(R.id.layout_ukuran_resize);
         layoutUkuranGrayscale = findViewById(R.id.layout_ukuran_grayscale);
-        // --- AKHIR PERUBAHAN ---
+        layoutInfoTambahan = findViewById(R.id.layout_info_tambahan); // Tambahkan ini
+        textViewRasioVsAsli = findViewById(R.id.textViewRasioVsAsli);
+        textViewRasioVsResize = findViewById(R.id.textViewRasioVsResize);
+        textViewRasioVsGrayscale = findViewById(R.id.textViewRasioVsGrayscale);
+        textViewSpaceSavingVsAsli = findViewById(R.id.textViewSpaceSavingVsAsli);
+        textViewSpaceSavingVsResize = findViewById(R.id.textViewSpaceSavingVsResize);
+        textViewSpaceSavingVsGrayscale = findViewById(R.id.textViewSpaceSavingVsGrayscale);
 
         // Inisialisasi RecyclerView untuk timeline
         recyclerViewLogStatus = findViewById(R.id.recyclerViewLogStatusMasyarakat);
@@ -219,6 +219,21 @@ public class DetailPengaduanActivity extends AppCompatActivity {
         String detikFormatted = df.format(detail.waktuProsesGambarMs / 1000.0);
         textViewDetailWaktu.setText(String.format(Locale.US, "Waktu Proses Kompresi : %d ms (%s detik)", detail.waktuProsesGambarMs, detikFormatted));
 
+        // Hitung dan tampilkan rasio kompresi perbandingan
+        double rasioVsAsli = hitungRasio(detail.ukuranFileRLEByte, detail.ukuranAsli);
+        double rasioVsResize = hitungRasio(detail.ukuranFileRLEByte, detail.ukuranSetelahResize);
+        double rasioVsGrayscale = hitungRasio(detail.ukuranFileRLEByte, detail.ukuranGrayscale);
+        textViewRasioVsAsli.setText(String.format(Locale.US, "%.2f %%", rasioVsAsli));
+        textViewRasioVsResize.setText(String.format(Locale.US, "%.2f %%", rasioVsResize));
+        textViewRasioVsGrayscale.setText(String.format(Locale.US, "%.2f %%", rasioVsGrayscale));
+        // Hitung dan tampilkan space saving perbandingan
+        double spaceSavingVsAsli = hitungSpaceSaving(detail.ukuranFileRLEByte, detail.ukuranAsli);
+        double spaceSavingVsResize = hitungSpaceSaving(detail.ukuranFileRLEByte, detail.ukuranSetelahResize);
+        double spaceSavingVsGrayscale = hitungSpaceSaving(detail.ukuranFileRLEByte, detail.ukuranGrayscale);
+        textViewSpaceSavingVsAsli.setText(String.format(Locale.US, "%.2f %%", spaceSavingVsAsli));
+        textViewSpaceSavingVsResize.setText(String.format(Locale.US, "%.2f %%", spaceSavingVsResize));
+        textViewSpaceSavingVsGrayscale.setText(String.format(Locale.US, "%.2f %%", spaceSavingVsGrayscale));
+
         // Mengisi RecyclerView Timeline
         if (detail.getRiwayatTindakLanjut() != null && !detail.getRiwayatTindakLanjut().isEmpty()) {
             List<LogStatusItem> riwayat = new ArrayList<>(detail.getRiwayatTindakLanjut());
@@ -240,6 +255,20 @@ public class DetailPengaduanActivity extends AppCompatActivity {
                 startActivity(intent);
             });
         }
+    }
+
+    private double hitungRasio(long ukuranSetelah, long ukuranSebelum) {
+        if (ukuranSebelum == 0) {
+            return 0.0; // Hindari pembagian dengan nol
+        }
+        return ((double) ukuranSetelah / ukuranSebelum) * 100.0;
+    }
+    
+    private double hitungSpaceSaving(long ukuranSetelah, long ukuranSebelum) {
+        if (ukuranSebelum == 0) {
+            return 0.0; // Hindari pembagian dengan nol
+        }
+        return (1.0 - ((double) ukuranSetelah / ukuranSebelum)) * 100.0;
     }
 
     private int dpToPx(int dp) {
