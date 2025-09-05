@@ -183,6 +183,7 @@
         </com.google.android.material.card.MaterialCardView>
 
             <com.google.android.material.card.MaterialCardView
+                android:id="@+id/card_view_analisis"
                 style="?attr/materialCardViewOutlinedStyle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -203,6 +204,7 @@
                         android:layout_marginBottom="16dp"/>
 
                     <LinearLayout
+                        android:id="@+id/layout_dimensi"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
@@ -244,6 +246,7 @@
                     </LinearLayout>
 
                     <LinearLayout
+                        android:id="@+id/layout_ukuran_resize"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
@@ -265,6 +268,7 @@
                     </LinearLayout>
 
                     <LinearLayout
+                        android:id="@+id/layout_ukuran_grayscale"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
