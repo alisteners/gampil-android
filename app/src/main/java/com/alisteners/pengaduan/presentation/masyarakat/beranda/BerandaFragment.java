@@ -67,6 +67,21 @@ public class BerandaFragment extends Fragment {
         setupListeners();
         observeViewModel();
 
+        getParentFragmentManager().setFragmentResultListener("pengaduan_baru", this, (requestKey, bundle) -> {
+            // Kode ini akan berjalan OTOMATIS setiap kali MainActivity mengirim sinyal.
+            Log.d(TAG, "Menerima sinyal 'pengaduan_baru', memuat ulang data.");
+
+            // Untuk memastikan UI konsisten dan memicu pembaruan,
+            // pilih Chip "Semua" secara programatis.
+            if (chipGroupFilter != null) {
+                chipGroupFilter.check(R.id.chipSemua);
+            }
+
+            // Memanggil metode loadData akan memicu pembaruan dari ViewModel
+            // set 'true' agar pengguna melihat ProgressBar dan tahu ada proses.
+            loadData(true);
+        });
+
         if (savedInstanceState == null) {
             loadData(true);
         }
@@ -181,5 +196,19 @@ public class BerandaFragment extends Fragment {
                 buttonCobaLagi.setVisibility(View.VISIBLE);
             }
         });
+    }
+
+    public void muatUlangDataDariActivity() {
+        // Pengecekan null untuk mencegah crash
+        if (viewModel != null && swipeRefreshLayout != null) {
+            Log.d(TAG, "Menerima sinyal refresh dari Activity, memuat ulang data...");
+            // Tampilkan loading spinner seolah-olah pengguna yang melakukan refresh
+            swipeRefreshLayout.setRefreshing(true);
+            // Panggil metode yang BENAR dari ViewModel
+            // gunakan filterStatusAktif yang sudah ada untuk konsistensi
+            loadData(false); // Memanggil metode loadData akan memicu viewModel.loadPengaduanPublik
+        } else {
+            Log.w(TAG, "Gagal refresh otomatis: viewModel atau swipeRefreshLayout adalah null.");
+        }
     }
 }

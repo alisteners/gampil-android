@@ -1,6 +1,7 @@
 package com.alisteners.pengaduan;
 
 import android.Manifest;
+import android.app.Activity;
 import android.app.ActivityManager;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -88,24 +89,37 @@ public class MainActivity extends AppCompatActivity {
     private static final int NOTIFICATION_ID = 1;
     private boolean isNotificationVisible = false;
 
+    // 1. Launcher untuk menangkap sinyal sukses dari BuatPengaduanActivity
+    private final ActivityResultLauncher<Intent> buatPengaduanLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            result -> {
+                if (result.getResultCode() == Activity.RESULT_OK) {
+                    // Kirim sinyal "pengaduan_baru" ke FragmentManager.
+                    // Fragment manapun yang sedang aktif bisa mendengarkan sinyal ini.
+                    Log.d(TAG, "Pengaduan berhasil dibuat, mengirim sinyal 'pengaduan_baru'.");
+                    getSupportFragmentManager().setFragmentResult("pengaduan_baru", new Bundle());
+                }
+            }
+    );
+
+    // 2. Launcher untuk memotong gambar (Cropper)
     private final ActivityResultLauncher<CropImageContractOptions> cropImage =
             registerForActivityResult(new CropImageContract(), result -> {
                 if (result.isSuccessful()) {
                     Uri croppedUri = result.getUriContent();
-
-                    // Dapatkan URI asli sebelum di-crop untuk menghitung ukuran file
                     Uri originalUri = result.getOriginalUri();
                     long originalFileSize = 0;
                     if (originalUri != null) {
                         originalFileSize = getFileSizeFromUri(originalUri);
                     }
 
-                    // Kirim URI hasil crop DAN ukuran file asli ke activity berikutnya
                     Intent intent = new Intent(this, BuatPengaduanActivity.class);
                     assert croppedUri != null;
                     intent.putExtra("PHOTO_URI", croppedUri.toString());
-                    intent.putExtra("ORIGINAL_FILE_SIZE", originalFileSize); // Mengirim ukuran asli
-                    startActivity(intent);
+                    intent.putExtra("ORIGINAL_FILE_SIZE", originalFileSize);
+
+                    buatPengaduanLauncher.launch(intent);
+
                 } else {
                     Exception error = result.getError();
                     Toast.makeText(this, "Gagal memotong gambar: " + (error != null ? error.getMessage() : "Unknown error"), Toast.LENGTH_SHORT).show();
