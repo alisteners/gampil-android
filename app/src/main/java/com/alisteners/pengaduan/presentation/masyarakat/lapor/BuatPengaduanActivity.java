@@ -133,6 +133,7 @@ public class BuatPengaduanActivity extends AppCompatActivity {
             if (message != null && !message.isEmpty()) {
                 Toast.makeText(BuatPengaduanActivity.this, message, Toast.LENGTH_LONG).show();
                 viewModel.clearPesanSukses();
+                setResult(RESULT_OK);
                 finish();
             }
         });
