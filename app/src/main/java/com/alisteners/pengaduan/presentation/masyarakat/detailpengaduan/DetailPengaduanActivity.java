@@ -3,10 +3,13 @@ package com.alisteners.pengaduan.presentation.masyarakat.detailpengaduan;
 import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.TypedValue;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -55,11 +58,26 @@ public class DetailPengaduanActivity extends AppCompatActivity {
     private CollapsingToolbarLayout collapsingToolbar;
     private TextView textViewDetailKategori, textViewDetailTanggal, textViewDetailLokasi, textViewDetailDeskripsi;
     private Chip chipDetailStatus;
-    private TextView textViewDetailDimensi, textViewDetailUkuranAsli, textViewDetailUkuranResize, textViewDetailUkuranGrayscale, textViewDetailUkuranRle, textViewDetailRasioHemat, textViewDetailRasioStandar, textViewDetailWaktu;
+    private TextView textViewDetailDimensi,
+            textViewDetailUkuranAsli,
+            textViewDetailUkuranResize,
+            textViewDetailUkuranGrayscale,
+            textViewDetailUkuranRle,
+            textViewDetailRasioHemat,
+            textViewDetailRasioStandar,
+            textViewDetailWaktu;
 
     // --- Deklarasi untuk Timeline ---
     private RecyclerView recyclerViewLogStatus;
     private LogStatusAdapter logStatusAdapter;
+
+    // --- TAMBAHKAN VARIABEL-VARIABEL INI ---
+    private com.google.android.material.card.MaterialCardView cardViewAnalisis;
+    private LinearLayout layoutDimensi, layoutUkuranResize, layoutUkuranGrayscale;
+    private int tapCount = 0;
+    private final Handler tapHandler = new Handler(Looper.getMainLooper());
+    private final Runnable tapResetRunnable = () -> tapCount = 0;
+    // --- AKHIR TAMBAHAN ---
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -71,6 +89,23 @@ public class DetailPengaduanActivity extends AppCompatActivity {
         setupViewModel();
         setupRecyclerView();
         observeViewModel();
+
+        // --- TAMBAHKAN BLOK KODE INI ---
+        cardViewAnalisis.setOnClickListener(v -> {
+            tapHandler.removeCallbacks(tapResetRunnable);
+            tapCount++;
+            if (tapCount == 2) {
+                Toast.makeText(this, "Mode Penelitian Diaktifkan!", Toast.LENGTH_SHORT).show();
+                // Toggle visibility untuk semua layout tersembunyi
+                int newVisibility = layoutDimensi.getVisibility() == View.VISIBLE ? View.GONE : View.VISIBLE;
+                layoutDimensi.setVisibility(newVisibility);
+                layoutUkuranResize.setVisibility(newVisibility);
+                layoutUkuranGrayscale.setVisibility(newVisibility);
+                tapCount = 0; // Reset
+            }
+            tapHandler.postDelayed(tapResetRunnable, 1000); // Reset dalam 1 detik
+        });
+        // --- AKHIR TAMBAHAN ---
 
         int idPengaduan = getIntent().getIntExtra(EXTRA_PENGADUAN_ID, -1);
         if (idPengaduan != -1) {
@@ -92,15 +127,22 @@ public class DetailPengaduanActivity extends AppCompatActivity {
         textViewDetailDeskripsi = findViewById(R.id.textViewDetailDeskripsi);
 
         // Inisialisasi TextView untuk data analisis
-//        textViewDetailDimensi = findViewById(R.id.textViewDetailDimensi);
+        textViewDetailDimensi = findViewById(R.id.textViewDetailDimensi);
         textViewDetailUkuranAsli = findViewById(R.id.textViewDetailUkuranAsli);
-//        textViewDetailUkuranResize = findViewById(R.id.textViewDetailUkuranResize);
-//        textViewDetailUkuranGrayscale = findViewById(R.id.textViewDetailUkuranGrayscale);
+        textViewDetailUkuranResize = findViewById(R.id.textViewDetailUkuranResize);
+        textViewDetailUkuranGrayscale = findViewById(R.id.textViewDetailUkuranGrayscale);
         textViewDetailUkuranRle = findViewById(R.id.textViewDetailUkuranRle);
         textViewDetailRasioHemat = findViewById(R.id.textViewDetailRasioHematRuang);
         textViewDetailRasioStandar = findViewById(R.id.textViewDetailRasioStandar);
         textViewDetailWaktu = findViewById(R.id.textViewDetailWaktu);
         ProgressBar progressBarRasio = findViewById(R.id.progressBarRasio);
+
+        // Inisialisasi view untuk fitur rahasia
+        cardViewAnalisis = findViewById(R.id.card_view_analisis);
+        layoutDimensi = findViewById(R.id.layout_dimensi);
+        layoutUkuranResize = findViewById(R.id.layout_ukuran_resize);
+        layoutUkuranGrayscale = findViewById(R.id.layout_ukuran_grayscale);
+        // --- AKHIR PERUBAHAN ---
 
         // Inisialisasi RecyclerView untuk timeline
         recyclerViewLogStatus = findViewById(R.id.recyclerViewLogStatusMasyarakat);
@@ -162,13 +204,13 @@ public class DetailPengaduanActivity extends AppCompatActivity {
         // Mengisi data analisis kompresi
         long jumlahPiksel = (long) detail.lebar * detail.tinggi;
         NumberFormat formatter = NumberFormat.getInstance(new Locale("id", "ID"));
-//        textViewDetailDimensi.setText(String.format(Locale.US, "%dx%d (%s Piksel)",
-//                detail.lebar,
-//                detail.tinggi,
-//                formatter.format(jumlahPiksel)));
+        textViewDetailDimensi.setText(String.format(Locale.US, "%dx%d (%s Piksel)",
+                detail.lebar,
+                detail.tinggi,
+                formatter.format(jumlahPiksel)));
         textViewDetailUkuranAsli.setText(formatUkuranBytes(detail.ukuranAsli));
-//        textViewDetailUkuranResize.setText(formatUkuranBytes(detail.ukuranSetelahResize));
-//        textViewDetailUkuranGrayscale.setText(formatUkuranBytes(detail.ukuranGrayscale));
+        textViewDetailUkuranResize.setText(formatUkuranBytes(detail.ukuranSetelahResize));
+        textViewDetailUkuranGrayscale.setText(formatUkuranBytes(detail.ukuranGrayscale));
         textViewDetailUkuranRle.setText(formatUkuranBytes(detail.ukuranFileRLEByte));
         textViewDetailRasioStandar.setText(String.format(Locale.US, "%.2f %%", detail.rasioKompresiStandar));
         textViewDetailRasioHemat.setText(String.format(Locale.US, "%.2f %%", detail.rasioKompresiRLE));
