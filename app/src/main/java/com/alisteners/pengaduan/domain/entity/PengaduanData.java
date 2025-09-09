@@ -17,13 +17,14 @@ public class PengaduanData {
     public final int ukuranFileRLEByte;
     public final double rasioKompresiRLE;
     public final double rasioKompresiStandar;
-    public final long waktuProsesGambarMs;
+    public final long waktuKompresiRleMs;
+    public final boolean isRleCompressed;
 
     public PengaduanData(int idUser, String lokasi, String kategori, String deskripsi,
                          boolean pernyataan, double latitude, double longitude,
                          int lebar, int tinggi, int ukuranBitmapAsli, int ukuranBitmapSetelahResize, int ukuranGrayscale,
                          int ukuranFileRLEByte, double rasioKompresiRLE, double rasioKompresiStandar,
-                         long waktuProsesGambarMs) {
+                         long waktuKompresiRleMs, boolean isRleCompressed) {
         this.idUser = idUser;
         this.lokasi = lokasi;
         this.kategori = kategori;
@@ -39,6 +40,7 @@ public class PengaduanData {
         this.ukuranFileRLEByte = ukuranFileRLEByte;
         this.rasioKompresiRLE = rasioKompresiRLE;
         this.rasioKompresiStandar = rasioKompresiStandar;
-        this.waktuProsesGambarMs = waktuProsesGambarMs;
+        this.waktuKompresiRleMs = waktuKompresiRleMs;
+        this.isRleCompressed = isRleCompressed;
     }
 }

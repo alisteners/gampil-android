@@ -1,5 +1,7 @@
 package com.alisteners.pengaduan.data.remote.service;
 
+import androidx.annotation.Nullable;
+
 import com.alisteners.pengaduan.data.remote.model.PengaduanPublikApiResponse;
 import com.alisteners.pengaduan.data.remote.model.PengaduanResponse;
 import com.alisteners.pengaduan.data.remote.model.RekapApiResponse;
@@ -25,7 +27,7 @@ public interface ApiService {
     @POST("buat_pengaduan.php")
     Call<PengaduanResponse> kirimPengaduanDenganFile(
             @PartMap Map<String, RequestBody> params,
-            @Part MultipartBody.Part fileRle,        // File pertama: data RLE
+            @Part @Nullable MultipartBody.Part fileRle,        // File pertama: data RLE
             @Part MultipartBody.Part fileThumbnail   // File kedua: Gambar Thumbnail
     );
 
