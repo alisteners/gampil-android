@@ -69,6 +69,7 @@ public class PengaduanRepositoryImpl implements PengaduanRepository, OperatorRep
         params.put("rasioKompresiRLE", RequestBody.create(MediaType.parse("text/plain"), String.format(Locale.US, "%.2f", dataPengaduan.rasioKompresiRLE)));
         params.put("rasioKompresiStandar", RequestBody.create(MediaType.parse("text/plain"), String.format(Locale.US, "%.2f", dataPengaduan.rasioKompresiStandar)));
         params.put("waktuProsesGambarMs", RequestBody.create(MediaType.parse("text/plain"), String.valueOf(dataPengaduan.waktuProsesGambarMs)));
+        params.put("isRleCompressed", RequestBody.create(MediaType.parse("text/plain"), dataPengaduan.isRleCompressed ? "1" : "0"));
 
         MultipartBody.Part fileRlePart = null;
         // HANYA buat file part jika fileRle tidak null dan ada
