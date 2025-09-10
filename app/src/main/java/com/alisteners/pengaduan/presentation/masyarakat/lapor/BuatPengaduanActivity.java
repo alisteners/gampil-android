@@ -279,7 +279,35 @@ public class BuatPengaduanActivity extends AppCompatActivity {
                 saveStringToStorage(dataRLEString, "rle_data_readable.txt", reportIdForFolder);
                 // --- PERUBAHAN UTAMA SELESAI ---
 
-                final int ukuranFileRLEByte = (int) fileRleData.length();
+                // --- INILAH OPTIMISASI UTAMANYA ---
+
+                // 1. Buat representasi string RLE DI DALAM MEMORI (RAM)
+                final String dataRLEStringEfisien = RLECompressor.convertRleListToEfficientString(compressedDataRLE);
+
+                // 2. Hitung ukurannya DI DALAM MEMORI (Sangat Cepat)
+                final int ukuranFileRLEByte = dataRLEStringEfisien.getBytes().length;
+
+
+                final File fileRleUntukDikirim;
+                final boolean isRleCompressed;
+
+                // 3. Bandingkan ukuran di memori (RLE string vs Grayscale bitmap)
+                if (ukuranFileRLEByte < ukuranByteDataGrayscale) {
+                    // KASUS 1: RLE Efektif!
+                    Log.d(TAG, "Kompresi RLE Efektif (vs Grayscale). Menyimpan file RLE untuk dikirim.");
+                    // HANYA JIKA EFEKTIF, kita tulis filenya ke penyimpanan (satu kali I/O)
+                    fileRleUntukDikirim = simpanStringKeFileSementara(dataRLEStringEfisien);
+                    if (fileRleUntukDikirim == null) throw new IOException("Gagal menyimpan RLE yang efisien ke file.");
+                    isRleCompressed = true;
+                } else {
+                    // KASUS 2: Negative Compression.
+                    Log.w(TAG, "Negative Compression terdeteksi (vs Grayscale). Tidak ada file RLE yang dibuat.");
+                    fileRleUntukDikirim = null;
+                    isRleCompressed = false;
+                    // Tidak ada file yang perlu dihapus karena memang tidak pernah dibuat!
+                }
+                // --- AKHIR DARI OPTIMISASI ---
+
                 final double rasioHematRuang = (ukuranAsli > 0) ? (1.0 - ((double) ukuranFileRLEByte / (double) ukuranAsli)) * 100.0 : 0.0;
                 final double rasioKompresiStandar = (ukuranAsli > 0) ? ((double) ukuranFileRLEByte / (double) ukuranAsli) * 100.0 : 0.0;
                 long endTime = System.currentTimeMillis();
@@ -295,8 +323,8 @@ public class BuatPengaduanActivity extends AppCompatActivity {
                             currentLatitude, currentLongitude,
                             bitmapWidth, bitmapHeight, ukuranAsli, ukuranBitmapSetelahResize,
                             ukuranByteDataGrayscale, ukuranFileRLEByte, rasioHematRuang,
-                            rasioKompresiStandar, durationMs);
-                    viewModel.prosesKirimPengaduan(pengaduanData, fileRleData, fileThumbnail);
+                            rasioKompresiStandar, durationMs, isRleCompressed);
+                    viewModel.prosesKirimPengaduan(pengaduanData, fileRleUntukDikirim, fileThumbnail);
                 });
 
             } catch (Exception e) {

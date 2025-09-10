@@ -22,10 +22,14 @@ public class KirimPengaduanUseCase {
             callback.onGagal("Pernyataan harus disetujui.");
             return;
         }
-        if (fileRle == null || !fileRle.exists() || fileRle.length() == 0) {
-            callback.onGagal("File data RLE tidak valid atau kosong.");
+        // --- PERBAIKAN VALIDASI DI SINI ---
+        // Pastikan hanya thumbnail yang wajib ada.
+        if (fileThumbnail == null || !fileThumbnail.exists() || fileThumbnail.length() == 0) {
+            callback.onGagal("File thumbnail tidak valid atau kosong.");
             return;
         }
+        // Validasi untuk fileRle yang lama sudah dihapus.
+        // --- AKHIR PERBAIKAN ---
 
         pengaduanRepository.kirimPengaduanKeServer(dataPengaduan, fileRle, fileThumbnail, callback);
     }

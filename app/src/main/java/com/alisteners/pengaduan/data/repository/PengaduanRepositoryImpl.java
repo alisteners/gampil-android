@@ -44,10 +44,13 @@ public class PengaduanRepositoryImpl implements PengaduanRepository, OperatorRep
     public void kirimPengaduanKeServer(PengaduanData dataPengaduan, @Nullable File fileRle, @Nullable File fileThumbnail, KirimPengaduanCallback callback) {
         Log.d(TAG, "kirimPengaduanKeServer: Mengirim data dengan 2 file...");
 
-        if (fileRle == null || !fileRle.exists() || fileThumbnail == null || !fileThumbnail.exists()) {
-            callback.onGagal("File laporan atau thumbnail tidak valid.");
+        // --- PERBAIKAN VALIDASI DI SINI ---
+        // Pastikan hanya thumbnail yang wajib ada. fileRle boleh null.
+        if (fileThumbnail == null || !fileThumbnail.exists()) {
+            callback.onGagal("File thumbnail tidak valid atau tidak ditemukan.");
             return;
         }
+        // --- AKHIR PERBAIKAN ---
 
         Map<String, RequestBody> params = new HashMap<>();
         params.put("idUser", RequestBody.create(MediaType.parse("text/plain"), String.valueOf(dataPengaduan.idUser)));
@@ -67,8 +70,12 @@ public class PengaduanRepositoryImpl implements PengaduanRepository, OperatorRep
         params.put("rasioKompresiStandar", RequestBody.create(MediaType.parse("text/plain"), String.format(Locale.US, "%.2f", dataPengaduan.rasioKompresiStandar)));
         params.put("waktuProsesGambarMs", RequestBody.create(MediaType.parse("text/plain"), String.valueOf(dataPengaduan.waktuProsesGambarMs)));
 
-        RequestBody requestFileRle = RequestBody.create(MediaType.parse("application/octet-stream"), fileRle); // <--- UBAH BARIS INI
-        MultipartBody.Part fileRlePart = MultipartBody.Part.createFormData("fileRLE", fileRle.getName(), requestFileRle);
+        MultipartBody.Part fileRlePart = null;
+        // HANYA buat file part jika fileRle tidak null dan ada
+        if (fileRle != null && fileRle.exists()) {
+            RequestBody requestFileRle = RequestBody.create(MediaType.parse("application/octet-stream"), fileRle);
+            fileRlePart = MultipartBody.Part.createFormData("fileRLE", fileRle.getName(), requestFileRle);
+        }
 
         RequestBody requestFileThumbnail = RequestBody.create(MediaType.parse("image/jpeg"), fileThumbnail);
         MultipartBody.Part fileThumbnailPart = MultipartBody.Part.createFormData("fileThumbnail", fileThumbnail.getName(), requestFileThumbnail);
