@@ -269,47 +269,37 @@ public class BuatPengaduanActivity extends AppCompatActivity {
                 final int ukuranByteDataGrayscale = grayscalePixels.length;
                 final List<MyPair<Integer, Integer>> compressedDataRLE = RLECompressor.compressRLE(quantizedPixels);
 
-                // A. Buat dan simpan file BINER (.rle) yang EFISIEN untuk DIKIRIM KE SERVER
+                // --- PERBAIKAN UTAMA: DARI TXT KE RLE BINER ---
+
+                // A. Buat dan simpan file BINER (.rle) untuk dikirim ke server
                 final byte[] dataRLEBytes = RLECompressor.convertRleListToByteArray(compressedDataRLE);
                 final File fileRleData = simpanByteKeFileSementara(dataRLEBytes, "rle_data_" + System.currentTimeMillis() + ".rle");
                 if (fileRleData == null) throw new IOException("Gagal menyimpan RLE biner ke file.");
 
-                // B. Buat dan simpan file TEKS (.txt) yang BISA ANDA BACA, HANYA UNTUK DEBUGGING
-                final String dataRLEString = RLECompressor.convertRleListToEfficientString(compressedDataRLE);
-                saveStringToStorage(dataRLEString, "rle_data_readable.txt", reportIdForFolder);
-                // --- PERUBAHAN UTAMA SELESAI ---
+                // B. (Opsional, jika Anda masih mau) Simpan file .txt untuk debugging Anda
+                final String dataRLEStringForDebug = RLECompressor.convertRleListToEfficientString(compressedDataRLE);
+                saveStringToStorage(dataRLEStringForDebug, "rle_data_readable.txt", reportIdForFolder);
 
-                // --- INILAH OPTIMISASI UTAMANYA ---
+                // --- AKHIR PERBAIKAN ---
 
-                // 1. Buat representasi string RLE DI DALAM MEMORI (RAM)
-                final String dataRLEStringEfisien = RLECompressor.convertRleListToEfficientString(compressedDataRLE);
-
-                // 2. Hitung ukurannya DI DALAM MEMORI (Sangat Cepat)
-                final int ukuranFileRLEByte = dataRLEStringEfisien.getBytes().length;
-
-
+                // Logika cerdas tidak berubah, hanya sumber filenya yang berbeda
+                final int ukuranFileRLEByte = (int) fileRleData.length();
                 final File fileRleUntukDikirim;
                 final boolean isRleCompressed;
 
-                // 3. Bandingkan ukuran di memori (RLE string vs Grayscale bitmap)
-                if (ukuranFileRLEByte < ukuranByteDataGrayscale) {
-                    // KASUS 1: RLE Efektif!
-                    Log.d(TAG, "Kompresi RLE Efektif (vs Grayscale). Menyimpan file RLE untuk dikirim.");
-                    // HANYA JIKA EFEKTIF, kita tulis filenya ke penyimpanan (satu kali I/O)
-                    fileRleUntukDikirim = simpanStringKeFileSementara(dataRLEStringEfisien);
-                    if (fileRleUntukDikirim == null) throw new IOException("Gagal menyimpan RLE yang efisien ke file.");
+                if (ukuranFileRLEByte < fileThumbnail.length()) {
+                    Log.d(TAG, "Kompresi RLE Efektif. Mengirim file .rle biner.");
+                    fileRleUntukDikirim = fileRleData;
                     isRleCompressed = true;
                 } else {
-                    // KASUS 2: Negative Compression.
-                    Log.w(TAG, "Negative Compression terdeteksi (vs Grayscale). Tidak ada file RLE yang dibuat.");
+                    Log.w(TAG, "Negative Compression terdeteksi. File RLE tidak akan dikirim.");
                     fileRleUntukDikirim = null;
                     isRleCompressed = false;
-                    // Tidak ada file yang perlu dihapus karena memang tidak pernah dibuat!
+                    fileRleData.delete();
                 }
-                // --- AKHIR DARI OPTIMISASI ---
 
-                final double rasioHematRuang = (ukuranAsli > 0) ? (1.0 - ((double) ukuranFileRLEByte / (double) ukuranAsli)) * 100.0 : 0.0;
-                final double rasioKompresiStandar = (ukuranAsli > 0) ? ((double) ukuranFileRLEByte / (double) ukuranAsli) * 100.0 : 0.0;
+                final double rasioHematRuang = (ukuranAsli > 0) ? (1.0 - ((double) ukuranFileRLEByte / ukuranAsli)) * 100.0 : 0.0;
+                final double rasioKompresiStandar = (ukuranAsli > 0) ? ((double) ukuranFileRLEByte / ukuranAsli) * 100.0 : 0.0;
                 long endTime = System.currentTimeMillis();
                 long durationMs = endTime - startTime;
 
