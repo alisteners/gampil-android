@@ -265,11 +265,19 @@ public class BuatPengaduanActivity extends AppCompatActivity {
                 bmQuantized.setPixels(colorPixelsQuantized, 0, bmQuantized.getWidth(), 0, 0, bmQuantized.getWidth(), bmQuantized.getHeight());
                 saveBitmapToStorage(bmQuantized, "foto_setelah_quantisasi_" + jumlahLevelQuantisasi + "level", reportIdForFolder);
 
+                // --- PERUBAHAN UTAMA DIMULAI DI SINI ---
                 final int ukuranByteDataGrayscale = grayscalePixels.length;
                 final List<MyPair<Integer, Integer>> compressedDataRLE = RLECompressor.compressRLE(quantizedPixels);
-                final String dataRLEStringEfisien = RLECompressor.convertRleListToEfficientString(compressedDataRLE);
-                final File fileRleData = simpanStringKeFileSementara(dataRLEStringEfisien);
-                if (fileRleData == null) throw new IOException("Gagal menyimpan RLE ke file.");
+
+                // A. Buat dan simpan file BINER (.rle) yang EFISIEN untuk DIKIRIM KE SERVER
+                final byte[] dataRLEBytes = RLECompressor.convertRleListToByteArray(compressedDataRLE);
+                final File fileRleData = simpanByteKeFileSementara(dataRLEBytes, "rle_data_" + System.currentTimeMillis() + ".rle");
+                if (fileRleData == null) throw new IOException("Gagal menyimpan RLE biner ke file.");
+
+                // B. Buat dan simpan file TEKS (.txt) yang BISA ANDA BACA, HANYA UNTUK DEBUGGING
+                final String dataRLEString = RLECompressor.convertRleListToEfficientString(compressedDataRLE);
+                saveStringToStorage(dataRLEString, "rle_data_readable.txt", reportIdForFolder);
+                // --- PERUBAHAN UTAMA SELESAI ---
 
                 final int ukuranFileRLEByte = (int) fileRleData.length();
                 final double rasioHematRuang = (ukuranAsli > 0) ? (1.0 - ((double) ukuranFileRLEByte / (double) ukuranAsli)) * 100.0 : 0.0;
@@ -467,6 +475,34 @@ public class BuatPengaduanActivity extends AppCompatActivity {
             return file;
         } catch (IOException e) {
             return null;
+        }
+    }
+
+    private File simpanByteKeFileSementara(byte[] data, String fileName) {
+        File fileOutput = new File(getCacheDir(), fileName);
+        try (FileOutputStream fos = new FileOutputStream(fileOutput)) {
+            fos.write(data);
+            return fileOutput;
+        } catch (IOException e) {
+            Log.e(TAG, "Gagal menyimpan byte array ke file sementara", e);
+            return null;
+        }
+    }
+
+    private void saveStringToStorage(String content, String fileName, String folderId) {
+        File directory = getExternalFilesDir(Environment.DIRECTORY_PICTURES);
+        if (directory == null) return;
+        File rleDebugDir = new File(directory, "RLE_Debug");
+        if (!rleDebugDir.exists()) rleDebugDir.mkdirs();
+        File reportDir = new File(rleDebugDir, folderId);
+        if (!reportDir.exists()) reportDir.mkdirs();
+        File file = new File(reportDir, fileName);
+        try (FileOutputStream fos = new FileOutputStream(file);
+             OutputStreamWriter osw = new OutputStreamWriter(fos)) {
+            osw.write(content);
+            Log.d(TAG, "DEBUG String berhasil disimpan ke: " + file.getAbsolutePath());
+        } catch (IOException e) {
+            Log.e(TAG, "DEBUG Error saat menyimpan string", e);
         }
     }
 }
