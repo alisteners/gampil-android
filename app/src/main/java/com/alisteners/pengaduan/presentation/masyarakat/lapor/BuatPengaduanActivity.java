@@ -267,15 +267,7 @@ public class BuatPengaduanActivity extends AppCompatActivity {
 
                 // --- PERUBAHAN UTAMA DIMULAI DI SINI ---
                 final int ukuranByteDataGrayscale = grayscalePixels.length;
-
-                // --- PERUBAHAN LOGIKA PENGUKURAN WAKTU ---
-                // 1. Mulai hitung waktu TEPAT SEBELUM kompresi RLE
-                long startTimeRle = System.currentTimeMillis();
                 final List<MyPair<Integer, Integer>> compressedDataRLE = RLECompressor.compressRLE(quantizedPixels);
-                long endTimeRle = System.currentTimeMillis();
-                final long durationRleMs = endTimeRle - startTimeRle; // <-- INI WAKTU RLE SAJA
-                Log.d(TAG, "Waktu HANYA untuk kompresi RLE: " + durationRleMs + " ms");
-                // --- AKHIR PERUBAHAN ---
 
                 // A. Buat dan simpan file BINER (.rle) yang EFISIEN untuk DIKIRIM KE SERVER
                 final byte[] dataRLEBytes = RLECompressor.convertRleListToByteArray(compressedDataRLE);
@@ -290,6 +282,8 @@ public class BuatPengaduanActivity extends AppCompatActivity {
                 final int ukuranFileRLEByte = (int) fileRleData.length();
                 final double rasioHematRuang = (ukuranAsli > 0) ? (1.0 - ((double) ukuranFileRLEByte / (double) ukuranAsli)) * 100.0 : 0.0;
                 final double rasioKompresiStandar = (ukuranAsli > 0) ? ((double) ukuranFileRLEByte / (double) ukuranAsli) * 100.0 : 0.0;
+                long endTime = System.currentTimeMillis();
+                long durationMs = endTime - startTime;
 
                 mainThreadHandler.post(() -> {
                     String lokasiFinal = lokasiOtomatis;
@@ -301,7 +295,7 @@ public class BuatPengaduanActivity extends AppCompatActivity {
                             currentLatitude, currentLongitude,
                             bitmapWidth, bitmapHeight, ukuranAsli, ukuranBitmapSetelahResize,
                             ukuranByteDataGrayscale, ukuranFileRLEByte, rasioHematRuang,
-                            rasioKompresiStandar, durationRleMs);
+                            rasioKompresiStandar, durationMs);
                     viewModel.prosesKirimPengaduan(pengaduanData, fileRleData, fileThumbnail);
                 });
 
