@@ -17,7 +17,6 @@ import android.location.Address;
 import android.location.Geocoder;
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.provider.MediaStore;
@@ -51,9 +50,6 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStreamWriter;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.ExecutorService;
@@ -66,10 +62,8 @@ public class BuatPengaduanActivity extends AppCompatActivity {
     private final CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
 
     private ImageView imageViewFotoPengaduan;
-    private EditText editTextLokasiOtomatis;
-    private EditText editTextDetailLokasiManual;
+    private EditText editTextLokasiOtomatis, editTextDetailLokasiManual, editTextDeskripsi;
     private Spinner spinnerKategori;
-    private EditText editTextDeskripsi;
     private CheckBox checkboxPernyataan;
     private Button buttonKirimPengaduan;
     private ProgressBar progressBarBuatPengaduan;
@@ -94,6 +88,7 @@ public class BuatPengaduanActivity extends AppCompatActivity {
         BuatPengaduanViewModelFactory factory = new BuatPengaduanViewModelFactory(kirimPengaduanUseCase);
         viewModel = new ViewModelProvider(this, factory).get(BuatPengaduanViewModel.class);
 
+        // Inisialisasi semua view
         ImageButton buttonKembali = findViewById(R.id.buttonKembali);
         imageViewFotoPengaduan = findViewById(R.id.imageViewFotoPengaduan);
         editTextLokasiOtomatis = findViewById(R.id.editTextLokasiOtomatis);
@@ -146,7 +141,6 @@ public class BuatPengaduanActivity extends AppCompatActivity {
         });
     }
 
-
     private void handleIncomingPhotoAndLocation() {
         if (getIntent() != null) {
             ukuranFileAsliBytes = getIntent().getLongExtra("ORIGINAL_FILE_SIZE", 0);
@@ -170,6 +164,7 @@ public class BuatPengaduanActivity extends AppCompatActivity {
     }
 
     private void attemptKirimPengaduan() {
+        // Validasi input pengguna sebelum mengirim
         if (bitmapFotoPengaduan == null) {
             Toast.makeText(this, getString(R.string.foto_bukti_wajib), Toast.LENGTH_SHORT).show();
             return;
@@ -202,9 +197,11 @@ public class BuatPengaduanActivity extends AppCompatActivity {
             return;
         }
 
+        // Tampilkan loading dan nonaktifkan tombol
         progressBarBuatPengaduan.setVisibility(View.VISIBLE);
         buttonKirimPengaduan.setEnabled(false);
 
+        // Mulai proses di background thread
         prosesDanKirimPengaduan(lokasiOtomatisValue, detailLokasiManualValue, kategoriValue, deskripsiValue, idUser);
     }
 
@@ -215,106 +212,84 @@ public class BuatPengaduanActivity extends AppCompatActivity {
 
         executorService.execute(() -> {
             try {
+                // --- Mulai Proses Kompresi ---
                 long startTime = System.currentTimeMillis();
                 final int bitmapWidth = bitmapUntukDiolah.getWidth();
                 final int bitmapHeight = bitmapUntukDiolah.getHeight();
                 final int ukuranAsli = (int) ukuranFileAsliBytes;
-                final int ukuranBitmapSetelahResize = bitmapUntukDiolah.getByteCount();
 
-                Log.d(TAG, "Background: Ukuran File Asli: " + ukuranAsli + " bytes");
-                Log.d(TAG, "Background: Ukuran Bitmap Setelah Crop: " + ukuranBitmapSetelahResize + " bytes");
-
-                // Buat ID unik untuk folder debug berdasarkan waktu saat ini
-                String reportIdForFolder = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
-
-                // --- LOGIKA PENYIMPANAN & PROSES GAMBAR ---
-
-                // 1. Simpan file thumbnail (cropped) untuk di-upload (Format JPG)
-                File fileThumbnail = simpanBitmapKeFileSementara(bitmapUntukDiolah);
-                if (fileThumbnail == null) throw new IOException("Gagal menyimpan file thumbnail.");
-
-                // 2. Simpan file thumbnail (cropped) untuk DEBUG (Format PNG)
-                saveBitmapToStorage(bitmapUntukDiolah, "cropped", reportIdForFolder);
-
-                // 3. Konversi ke Grayscale
+                // 1. Konversi ke Grayscale (di RAM)
                 int[] grayscalePixels = RLECompressor.convertBitmapToGrayscale(bitmapUntukDiolah);
                 if (grayscalePixels.length == 0) throw new IOException("Gagal konversi ke grayscale.");
+                final int ukuranByteDataGrayscale = grayscalePixels.length; // Ukuran data mentah grayscale (jumlah piksel = W x H)
 
-                // 4. Buat & Simpan Bitmap Grayscale (SEBELUM Kuantisasi) untuk DEBUG
-                Bitmap bitmapGrayscale = Bitmap.createBitmap(bitmapWidth, bitmapHeight, Bitmap.Config.ARGB_8888);
-                int[] colorPixelsGrayscale = new int[grayscalePixels.length];
-                for (int i = 0; i < grayscalePixels.length; i++) {
-                    int gray = grayscalePixels[i];
-                    colorPixelsGrayscale[i] = Color.rgb(gray, gray, gray);
-                }
-                bitmapGrayscale.setPixels(colorPixelsGrayscale, 0, bitmapWidth, 0, 0, bitmapWidth, bitmapHeight);
-                saveBitmapToStorage(bitmapGrayscale, "grayscale", reportIdForFolder);
-
-                // 5. Lanjutkan ke Kuantisasi
-                int jumlahLevelQuantisasi = 2;
+                // 2. Kuantisasi (di RAM)
+                int jumlahLevelQuantisasi = 8;
                 int[] quantizedPixels = RLECompressor.quantizeGrayscale(grayscalePixels, jumlahLevelQuantisasi);
                 if (quantizedPixels.length == 0) throw new IOException("Gagal melakukan kuantisasi.");
 
-                // 6. Buat & Simpan Bitmap Hasil Kuantisasi untuk DEBUG
-                Bitmap bmQuantized = Bitmap.createBitmap(bitmapWidth, bitmapHeight, Bitmap.Config.ARGB_8888);
-                int[] colorPixelsQuantized = new int[quantizedPixels.length];
-                for (int i = 0; i < quantizedPixels.length; i++) {
-                    int gray = quantizedPixels[i];
-                    colorPixelsQuantized[i] = Color.rgb(gray, gray, gray);
-                }
-                bmQuantized.setPixels(colorPixelsQuantized, 0, bmQuantized.getWidth(), 0, 0, bmQuantized.getWidth(), bmQuantized.getHeight());
-                saveBitmapToStorage(bmQuantized, "foto_setelah_quantisasi_" + jumlahLevelQuantisasi + "level", reportIdForFolder);
-
-                // --- PERUBAHAN UTAMA DIMULAI DI SINI ---
-                final int ukuranByteDataGrayscale = grayscalePixels.length;
+                // 3. Kompresi RLE (di RAM)
                 final List<MyPair<Integer, Integer>> compressedDataRLE = RLECompressor.compressRLE(quantizedPixels);
 
-                // --- PERBAIKAN UTAMA: DARI TXT KE RLE BINER ---
+                // 4. Konversi hasil RLE ke format biner (byte[]) (di RAM)
+                final byte[] dataRLEBiner = RLECompressor.convertRleListToBinary(compressedDataRLE);
+                final int ukuranFileRLEByte = dataRLEBiner.length;
 
-                // A. Buat dan simpan file BINER (.rle) untuk dikirim ke server
-                final byte[] dataRLEBytes = RLECompressor.convertRleListToByteArray(compressedDataRLE);
-                final File fileRleData = simpanByteKeFileSementara(dataRLEBytes, "rle_data_" + System.currentTimeMillis() + ".rle");
-                if (fileRleData == null) throw new IOException("Gagal menyimpan RLE biner ke file.");
+                // 5. Logika Smart-Compression (Perbandingan Cepat di RAM)
+                boolean pakaiRle = ukuranFileRLEByte < ukuranByteDataGrayscale;
+                Log.d(TAG, "Background: Keputusan Smart-Compression -> " + (pakaiRle ? "Gunakan RLE" : "Gunakan Grayscale (JPG)"));
 
-                // B. (Opsional, jika Anda masih mau) Simpan file .txt untuk debugging Anda
-                final String dataRLEStringForDebug = RLECompressor.convertRleListToEfficientString(compressedDataRLE);
-                saveStringToStorage(dataRLEStringForDebug, "rle_data_readable.txt", reportIdForFolder);
+                File fileDataUntukUpload;
+                int ukuranDataTerkirim;
 
-                // --- AKHIR PERBAIKAN ---
-
-                // Logika cerdas tidak berubah, hanya sumber filenya yang berbeda
-                final int ukuranFileRLEByte = (int) fileRleData.length();
-                final File fileRleUntukDikirim;
-                final boolean isRleCompressed;
-
-                if (ukuranFileRLEByte < fileThumbnail.length()) {
-                    Log.d(TAG, "Kompresi RLE Efektif. Mengirim file .rle biner.");
-                    fileRleUntukDikirim = fileRleData;
-                    isRleCompressed = true;
+                // --- HANYA SATU KALI OPERASI TULIS FILE (I/O) KE DISK BERDASARKAN KEPUTUSAN ---
+                if (pakaiRle) {
+                    // Skenario A: RLE efisien, simpan data .rle
+                    fileDataUntukUpload = simpanByteKeFileSementara(dataRLEBiner);
+                    if (fileDataUntukUpload == null) throw new IOException("Gagal menyimpan data RLE biner ke file.");
+                    ukuranDataTerkirim = ukuranFileRLEByte;
                 } else {
-                    Log.w(TAG, "Negative Compression terdeteksi. File RLE tidak akan dikirim.");
-                    fileRleUntukDikirim = null;
-                    isRleCompressed = false;
-                    fileRleData.delete();
+                    // Skenario B: RLE tidak efisien, simpan gambar grayscale sebagai fallback .jpg
+                    Bitmap bitmapGrayscale = Bitmap.createBitmap(bitmapWidth, bitmapHeight, Bitmap.Config.ARGB_8888);
+                    int[] colorPixelsGrayscale = new int[grayscalePixels.length];
+                    for (int i = 0; i < grayscalePixels.length; i++) {
+                        int gray = grayscalePixels[i];
+                        colorPixelsGrayscale[i] = Color.rgb(gray, gray, gray);
+                    }
+                    bitmapGrayscale.setPixels(colorPixelsGrayscale, 0, bitmapWidth, 0, 0, bitmapWidth, bitmapHeight);
+
+                    fileDataUntukUpload = simpanBitmapKeFileSementara(bitmapGrayscale, "fallback_grayscale.jpg", 85); // Kualitas 85%
+                    if (fileDataUntukUpload == null) throw new IOException("Gagal menyimpan fallback grayscale JPG ke file.");
+                    ukuranDataTerkirim = (int) fileDataUntukUpload.length();
                 }
 
-                final double rasioHematRuang = (ukuranAsli > 0) ? (1.0 - ((double) ukuranFileRLEByte / ukuranAsli)) * 100.0 : 0.0;
-                final double rasioKompresiStandar = (ukuranAsli > 0) ? ((double) ukuranFileRLEByte / ukuranAsli) * 100.0 : 0.0;
+                // Simpan thumbnail untuk ditampilkan di aplikasi (selalu dalam format JPG)
+                File fileThumbnail = simpanBitmapKeFileSementara(bitmapUntukDiolah, "thumbnail.jpg", 90);
+                if (fileThumbnail == null) throw new IOException("Gagal menyimpan file thumbnail.");
+
+                // Ambil ukuran Bitmap teoritis di RAM untuk tujuan analisis di Detail Pengaduan
+                final int ukuranBitmapSetelahResize = bitmapUntukDiolah.getByteCount();
+
+                // Hitung metrik akhir
+                final double rasioHematRuang = (ukuranAsli > 0) ? (1.0 - ((double) ukuranDataTerkirim / (double) ukuranAsli)) * 100.0 : 0.0;
+                final double rasioKompresiStandar = (ukuranAsli > 0) ? ((double) ukuranDataTerkirim / (double) ukuranAsli) * 100.0 : 0.0;
                 long endTime = System.currentTimeMillis();
                 long durationMs = endTime - startTime;
 
+                // Kirim data ke ViewModel di Main Thread
                 mainThreadHandler.post(() -> {
                     String lokasiFinal = lokasiOtomatis;
                     if (!detailLokasi.isEmpty()) {
                         lokasiFinal = lokasiOtomatis.isEmpty() ? detailLokasi : lokasiOtomatis + " (Patokan : " + detailLokasi + ")";
                     }
                     PengaduanData pengaduanData = new PengaduanData(
-                            idUser, lokasiFinal, kategori, deskripsi, true,
+                            idUser, lokasiFinal, kategori, deskripsi, pakaiRle,
                             currentLatitude, currentLongitude,
                             bitmapWidth, bitmapHeight, ukuranAsli, ukuranBitmapSetelahResize,
-                            ukuranByteDataGrayscale, ukuranFileRLEByte, rasioHematRuang,
-                            rasioKompresiStandar, durationMs, isRleCompressed);
-                    viewModel.prosesKirimPengaduan(pengaduanData, fileRleUntukDikirim, fileThumbnail);
+                            ukuranByteDataGrayscale, ukuranDataTerkirim, rasioHematRuang,
+                            rasioKompresiStandar, durationMs, pakaiRle);
+
+                    viewModel.prosesKirimPengaduan(pengaduanData, fileDataUntukUpload, fileThumbnail);
                 });
 
             } catch (Exception e) {
@@ -328,45 +303,39 @@ public class BuatPengaduanActivity extends AppCompatActivity {
         });
     }
 
-    private void saveBitmapToStorage(Bitmap bitmap, String fileNamePrefix, String folderId) {
-        if (bitmap == null) {
-            Log.e(TAG, "Bitmap null, tidak bisa disimpan (debug): " + fileNamePrefix);
-            return;
-        }
-        File directory = getExternalFilesDir(Environment.DIRECTORY_PICTURES);
-        if (directory == null) {
-            Log.e(TAG, "External pictures directory not available for app (debug).");
-            return;
-        }
-
-        // Buat sub-folder RLE_Debug jika belum ada
-        File rleDebugDir = new File(directory, "RLE_Debug");
-        if (!rleDebugDir.exists()) {
-            if (!rleDebugDir.mkdirs()) {
-                Log.e(TAG, "Gagal membuat direktori RLE_Debug.");
-                return; // Hentikan jika gagal membuat folder
-            }
-        }
-
-        // Buat folder unik untuk setiap laporan di dalam RLE_Debug
-        File reportDir = new File(rleDebugDir, folderId);
-        if (!reportDir.exists()) {
-            if (!reportDir.mkdirs()) {
-                Log.e(TAG, "Gagal membuat direktori untuk laporan: " + folderId);
-                return; // Hentikan jika gagal membuat folder
-            }
-        }
-
-        String fileName = fileNamePrefix + ".png"; // Nama file sekarang lebih simpel
-        File file = new File(reportDir, fileName); // Simpan di dalam folder laporan
-
-        try (FileOutputStream out = new FileOutputStream(file)) {
-            bitmap.compress(Bitmap.CompressFormat.PNG, 100, out);
-            Log.d(TAG, "DEBUG Bitmap berhasil disimpan ke: " + file.getAbsolutePath());
-        } catch (IOException e) {
-            Log.e(TAG, "DEBUG Error saat menyimpan bitmap " + fileName, e);
-        }
-    }
+//    private void saveBitmapToStorage(Bitmap bitmap, String fileNamePrefix, String folderId) {
+//        if (bitmap == null) {
+//            Log.e(TAG, "Bitmap null, tidak bisa disimpan (debug): " + fileNamePrefix);
+//            return;
+//        }
+//        File directory = getExternalFilesDir(Environment.DIRECTORY_PICTURES);
+//        if (directory == null) {
+//            Log.e(TAG, "External pictures directory not available for app (debug).");
+//            return;
+//        }
+//        File rleDebugDir = new File(directory, "RLE_Debug");
+//        if (!rleDebugDir.exists()) {
+//            if (!rleDebugDir.mkdirs()) {
+//                Log.e(TAG, "Gagal membuat direktori RLE_Debug.");
+//                return;
+//            }
+//        }
+//        File reportDir = new File(rleDebugDir, folderId);
+//        if (!reportDir.exists()) {
+//            if (!reportDir.mkdirs()) {
+//                Log.e(TAG, "Gagal membuat direktori untuk laporan: " + folderId);
+//                return;
+//            }
+//        }
+//        String fileName = fileNamePrefix + ".png";
+//        File file = new File(reportDir, fileName);
+//        try (FileOutputStream out = new FileOutputStream(file)) {
+//            bitmap.compress(Bitmap.CompressFormat.PNG, 100, out);
+//            Log.d(TAG, "DEBUG Bitmap berhasil disimpan ke: " + file.getAbsolutePath());
+//        } catch (IOException e) {
+//            Log.e(TAG, "DEBUG Error saat menyimpan bitmap " + fileName, e);
+//        }
+//    }
 
     @Override
     protected void onDestroy() {
@@ -475,52 +444,25 @@ public class BuatPengaduanActivity extends AppCompatActivity {
         return Bitmap.createBitmap(source, 0, 0, source.getWidth(), source.getHeight(), matrix, true);
     }
 
-    private File simpanStringKeFileSementara(String kontenString) {
-        File fileOutput = new File(getCacheDir(), "rle_data_" + System.currentTimeMillis() + ".txt");
-        try (FileOutputStream fos = new FileOutputStream(fileOutput);
-             OutputStreamWriter osw = new OutputStreamWriter(fos)) {
-            osw.write(kontenString);
-            return fileOutput;
-        } catch (IOException e) {
-            return null;
-        }
-    }
-
-    private File simpanBitmapKeFileSementara(Bitmap bitmap) {
-        File file = new File(getCacheDir(), "thumbnail_" + System.currentTimeMillis() + ".jpg");
+    private File simpanBitmapKeFileSementara(Bitmap bitmap, String namaFile, int quality) {
+        File file = new File(getCacheDir(), namaFile);
         try (FileOutputStream out = new FileOutputStream(file)) {
-            bitmap.compress(Bitmap.CompressFormat.JPEG, 90, out);
+            bitmap.compress(Bitmap.CompressFormat.JPEG, quality, out);
             return file;
         } catch (IOException e) {
+            Log.e(TAG, "Gagal menyimpan bitmap ke file sementara", e);
             return null;
         }
     }
 
-    private File simpanByteKeFileSementara(byte[] data, String fileName) {
-        File fileOutput = new File(getCacheDir(), fileName);
+    private File simpanByteKeFileSementara(byte[] data) {
+        File fileOutput = new File(getCacheDir(), "hasil_kompresi.rle");
         try (FileOutputStream fos = new FileOutputStream(fileOutput)) {
             fos.write(data);
             return fileOutput;
         } catch (IOException e) {
             Log.e(TAG, "Gagal menyimpan byte array ke file sementara", e);
             return null;
-        }
-    }
-
-    private void saveStringToStorage(String content, String fileName, String folderId) {
-        File directory = getExternalFilesDir(Environment.DIRECTORY_PICTURES);
-        if (directory == null) return;
-        File rleDebugDir = new File(directory, "RLE_Debug");
-        if (!rleDebugDir.exists()) rleDebugDir.mkdirs();
-        File reportDir = new File(rleDebugDir, folderId);
-        if (!reportDir.exists()) reportDir.mkdirs();
-        File file = new File(reportDir, fileName);
-        try (FileOutputStream fos = new FileOutputStream(file);
-             OutputStreamWriter osw = new OutputStreamWriter(fos)) {
-            osw.write(content);
-            Log.d(TAG, "DEBUG String berhasil disimpan ke: " + file.getAbsolutePath());
-        } catch (IOException e) {
-            Log.e(TAG, "DEBUG Error saat menyimpan string", e);
         }
     }
 }

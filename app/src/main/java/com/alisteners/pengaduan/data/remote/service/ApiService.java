@@ -27,8 +27,8 @@ public interface ApiService {
     @POST("buat_pengaduan.php")
     Call<PengaduanResponse> kirimPengaduanDenganFile(
             @PartMap Map<String, RequestBody> params,
-            @Part @Nullable MultipartBody.Part fileRle,        // File pertama: data RLE
-            @Part MultipartBody.Part fileThumbnail   // File kedua: Gambar Thumbnail
+            @Part @Nullable MultipartBody.Part fileRle,
+            @Part MultipartBody.Part fileThumbnail
     );
 
     @FormUrlEncoded

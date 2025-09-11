@@ -8,7 +8,6 @@ public class PengaduanData {
     public final boolean pernyataan;
     public final double latitude;
     public final double longitude;
-
     public final int lebar;
     public final int tinggi;
     public final int ukuranBitmapAsli;

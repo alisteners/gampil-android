@@ -14,7 +14,6 @@ import com.alisteners.pengaduan.data.remote.service.ApiService;
 import com.alisteners.pengaduan.domain.entity.PengaduanData;
 import com.alisteners.pengaduan.domain.operator.repository.OperatorRepository;
 import com.alisteners.pengaduan.domain.repository.PengaduanRepository;
-import com.google.gson.Gson;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -32,6 +31,7 @@ import retrofit2.Callback;
 import retrofit2.Response;
 
 public class PengaduanRepositoryImpl implements PengaduanRepository, OperatorRepository {
+
     private static final String TAG = "PengaduanRepoImpl";
     private final ApiService apiService;
 
@@ -39,49 +39,52 @@ public class PengaduanRepositoryImpl implements PengaduanRepository, OperatorRep
         this.apiService = ApiClient.getApiService();
     }
 
-    // IMPLEMENTASI DARI PengaduanRepository (Sisi Masyarakat)
-    @Override
-    public void kirimPengaduanKeServer(PengaduanData dataPengaduan, @Nullable File fileRle, @Nullable File fileThumbnail, KirimPengaduanCallback callback) {
-        Log.d(TAG, "kirimPengaduanKeServer: Mengirim data dengan 2 file...");
+    //region Implementasi PengaduanRepository (Sisi Masyarakat)
 
-        // --- PERBAIKAN VALIDASI DI SINI ---
-        // Pastikan hanya thumbnail yang wajib ada. fileRle boleh null.
-        if (fileThumbnail == null || !fileThumbnail.exists()) {
+    @Override
+    public void kirimPengaduanKeServer(PengaduanData dataPengaduan, @Nullable File fileData, @Nullable File fileThumbnail, KirimPengaduanCallback callback) {
+        Log.d(TAG, "Mempersiapkan pengiriman pengaduan ke server...");
+
+        // 1. Membuat RequestBody untuk semua parameter teks
+        Map<String, RequestBody> params = new HashMap<>();
+        params.put("idUser", createPartFromString(String.valueOf(dataPengaduan.idUser)));
+        params.put("lokasi", createPartFromString(dataPengaduan.lokasi));
+        params.put("kategori", createPartFromString(dataPengaduan.kategori));
+        params.put("deskripsi", createPartFromString(dataPengaduan.deskripsi));
+        params.put("pernyataan", createPartFromString(dataPengaduan.pernyataan ? "1" : "0"));
+        params.put("latitude", createPartFromString(String.valueOf(dataPengaduan.latitude)));
+        params.put("longitude", createPartFromString(String.valueOf(dataPengaduan.longitude)));
+        params.put("lebar", createPartFromString(String.valueOf(dataPengaduan.lebar)));
+        params.put("tinggi", createPartFromString(String.valueOf(dataPengaduan.tinggi)));
+        params.put("ukuranAsli", createPartFromString(String.valueOf(dataPengaduan.ukuranBitmapAsli)));
+        params.put("ukuranSetelahResize", createPartFromString(String.valueOf(dataPengaduan.ukuranBitmapSetelahResize)));
+        params.put("ukuranGrayscale", createPartFromString(String.valueOf(dataPengaduan.ukuranGrayscale)));
+        params.put("ukuranFileRLE", createPartFromString(String.valueOf(dataPengaduan.ukuranFileRLEByte)));
+        params.put("rasioKompresiRLE", createPartFromString(String.format(Locale.US, "%.2f", dataPengaduan.rasioKompresiRLE)));
+        params.put("rasioKompresiStandar", createPartFromString(String.format(Locale.US, "%.2f", dataPengaduan.rasioKompresiStandar)));
+        params.put("waktuProsesGambarMs", createPartFromString(String.valueOf(dataPengaduan.waktuProsesGambarMs)));
+        params.put("isRleCompressed", createPartFromString(dataPengaduan.isRleCompressed ? "1" : "0"));
+
+        // 2. Membuat MultipartBody.Part untuk file data utama (bisa .rle atau .jpg)
+        MultipartBody.Part fileDataPart = null;
+        if (fileData != null && fileData.exists()) {
+            String mimeType = dataPengaduan.isRleCompressed ? "application/octet-stream" : "image/jpeg";
+            RequestBody requestFileData = RequestBody.create(MediaType.parse(mimeType), fileData);
+            fileDataPart = MultipartBody.Part.createFormData("fileRLE", fileData.getName(), requestFileData);
+        }
+
+        // 3. Membuat MultipartBody.Part untuk file thumbnail (selalu .jpg)
+        MultipartBody.Part fileThumbnailPart;
+        if (fileThumbnail != null && fileThumbnail.exists()) {
+            RequestBody requestFileThumbnail = RequestBody.create(MediaType.parse("image/jpeg"), fileThumbnail);
+            fileThumbnailPart = MultipartBody.Part.createFormData("fileThumbnail", fileThumbnail.getName(), requestFileThumbnail);
+        } else {
             callback.onGagal("File thumbnail tidak valid atau tidak ditemukan.");
             return;
         }
-        // --- AKHIR PERBAIKAN ---
 
-        Map<String, RequestBody> params = new HashMap<>();
-        params.put("idUser", RequestBody.create(MediaType.parse("text/plain"), String.valueOf(dataPengaduan.idUser)));
-        params.put("lokasi", RequestBody.create(MediaType.parse("text/plain"), dataPengaduan.lokasi));
-        params.put("kategori", RequestBody.create(MediaType.parse("text/plain"), dataPengaduan.kategori));
-        params.put("deskripsi", RequestBody.create(MediaType.parse("text/plain"), dataPengaduan.deskripsi));
-        params.put("pernyataan", RequestBody.create(MediaType.parse("text/plain"), dataPengaduan.pernyataan ? "1" : "0"));
-        params.put("latitude", RequestBody.create(MediaType.parse("text/plain"), String.valueOf(dataPengaduan.latitude)));
-        params.put("longitude", RequestBody.create(MediaType.parse("text/plain"), String.valueOf(dataPengaduan.longitude)));
-        params.put("lebar", RequestBody.create(MediaType.parse("text/plain"), String.valueOf(dataPengaduan.lebar)));
-        params.put("tinggi", RequestBody.create(MediaType.parse("text/plain"), String.valueOf(dataPengaduan.tinggi)));
-        params.put("ukuranAsli", RequestBody.create(MediaType.parse("text/plain"), String.valueOf(dataPengaduan.ukuranBitmapAsli)));
-        params.put("ukuranSetelahResize", RequestBody.create(MediaType.parse("text/plain"), String.valueOf(dataPengaduan.ukuranBitmapSetelahResize)));
-        params.put("ukuranGrayscale", RequestBody.create(MediaType.parse("text/plain"), String.valueOf(dataPengaduan.ukuranGrayscale)));
-        params.put("ukuranFileRLE", RequestBody.create(MediaType.parse("text/plain"), String.valueOf(dataPengaduan.ukuranFileRLEByte)));
-        params.put("rasioKompresiRLE", RequestBody.create(MediaType.parse("text/plain"), String.format(Locale.US, "%.2f", dataPengaduan.rasioKompresiRLE)));
-        params.put("rasioKompresiStandar", RequestBody.create(MediaType.parse("text/plain"), String.format(Locale.US, "%.2f", dataPengaduan.rasioKompresiStandar)));
-        params.put("waktuProsesGambarMs", RequestBody.create(MediaType.parse("text/plain"), String.valueOf(dataPengaduan.waktuProsesGambarMs)));
-        params.put("isRleCompressed", RequestBody.create(MediaType.parse("text/plain"), dataPengaduan.isRleCompressed ? "1" : "0"));
-
-        MultipartBody.Part fileRlePart = null;
-        // HANYA buat file part jika fileRle tidak null dan ada
-        if (fileRle != null && fileRle.exists()) {
-            RequestBody requestFileRle = RequestBody.create(MediaType.parse("application/octet-stream"), fileRle);
-            fileRlePart = MultipartBody.Part.createFormData("fileRLE", fileRle.getName(), requestFileRle);
-        }
-
-        RequestBody requestFileThumbnail = RequestBody.create(MediaType.parse("image/jpeg"), fileThumbnail);
-        MultipartBody.Part fileThumbnailPart = MultipartBody.Part.createFormData("fileThumbnail", fileThumbnail.getName(), requestFileThumbnail);
-
-        apiService.kirimPengaduanDenganFile(params, fileRlePart, fileThumbnailPart).enqueue(new Callback<>() {
+        // 4. Melakukan panggilan API
+        apiService.kirimPengaduanDenganFile(params, fileDataPart, fileThumbnailPart).enqueue(new Callback<>() {
             @Override
             public void onResponse(@NonNull Call<PengaduanResponse> call, @NonNull Response<PengaduanResponse> response) {
                 if (response.isSuccessful() && response.body() != null) {
@@ -104,16 +107,14 @@ public class PengaduanRepositoryImpl implements PengaduanRepository, OperatorRep
 
     @Override
     public void getRiwayatPengaduan(int idUser, GetRiwayatCallback callback) {
-        Log.d(TAG, "getRiwayatPengaduan: Mengambil riwayat untuk idUser: " + idUser);
         apiService.getRiwayatPengaduan(idUser).enqueue(new Callback<>() {
             @Override
             public void onResponse(@NonNull Call<RiwayatApiResponse> call, @NonNull Response<RiwayatApiResponse> response) {
                 if (response.isSuccessful() && response.body() != null) {
-                    RiwayatApiResponse apiResponse = response.body();
-                    if ("success".equalsIgnoreCase(apiResponse.getStatus())) {
-                        callback.onBerhasil(apiResponse.getData() != null ? apiResponse.getData() : new ArrayList<>());
+                    if ("success".equalsIgnoreCase(response.body().getStatus())) {
+                        callback.onBerhasil(response.body().getData() != null ? response.body().getData() : new ArrayList<>());
                     } else {
-                        callback.onGagal(apiResponse.getMessage());
+                        callback.onGagal(response.body().getMessage());
                     }
                 } else {
                     callback.onGagal("Gagal mengambil riwayat (Server Error: " + response.code() + ")");
@@ -129,17 +130,14 @@ public class PengaduanRepositoryImpl implements PengaduanRepository, OperatorRep
 
     @Override
     public void getDetailPengaduan(int idPengaduan, GetDetailCallback callback) {
-        Log.d(TAG, "getDetailPengaduan: Mengambil detail untuk idPengaduan: " + idPengaduan);
         apiService.getDetailPengaduan(idPengaduan).enqueue(new Callback<>() {
             @Override
             public void onResponse(@NonNull Call<DetailApiResponse> call, @NonNull Response<DetailApiResponse> response) {
-                Log.d("API_RESPONSE_DETAIL", new Gson().toJson(response.body()));
                 if (response.isSuccessful() && response.body() != null) {
-                    DetailApiResponse apiResponse = response.body();
-                    if ("success".equalsIgnoreCase(apiResponse.getStatus()) && apiResponse.getData() != null) {
-                        callback.onBerhasil(apiResponse.getData());
+                    if ("success".equalsIgnoreCase(response.body().getStatus()) && response.body().getData() != null) {
+                        callback.onBerhasil(response.body().getData());
                     } else {
-                        callback.onGagal(apiResponse.getMessage());
+                        callback.onGagal(response.body().getMessage());
                     }
                 } else {
                     callback.onGagal("Gagal mengambil detail (Server Error: " + response.code() + ")");
@@ -155,16 +153,14 @@ public class PengaduanRepositoryImpl implements PengaduanRepository, OperatorRep
 
     @Override
     public void getPengaduanPublik(String status, GetPengaduanPublikCallback callback) {
-        Log.d(TAG, "getPengaduanPublik: Mengambil pengaduan publik dengan status: " + status);
         apiService.getPengaduanPublik(status).enqueue(new Callback<>() {
             @Override
             public void onResponse(@NonNull Call<PengaduanPublikApiResponse> call, @NonNull Response<PengaduanPublikApiResponse> response) {
                 if (response.isSuccessful() && response.body() != null) {
-                    PengaduanPublikApiResponse apiResponse = response.body();
-                    if ("success".equalsIgnoreCase(apiResponse.getStatus()) && apiResponse.getData() != null) {
-                        callback.onBerhasil(apiResponse.getData());
+                    if ("success".equalsIgnoreCase(response.body().getStatus()) && response.body().getData() != null) {
+                        callback.onBerhasil(response.body().getData());
                     } else {
-                        callback.onGagal(apiResponse.getMessage());
+                        callback.onGagal(response.body().getMessage());
                     }
                 } else {
                     callback.onGagal("Gagal mengambil data publik (Server Error: " + response.code() + ")");
@@ -180,14 +176,13 @@ public class PengaduanRepositoryImpl implements PengaduanRepository, OperatorRep
 
     @Override
     public void hapusPengaduan(int idPengaduan, DeletePengaduanCallback callback) {
-        // Karena menghapus dari sisi operator sekarang butuh alasan, kita panggil versi lain dengan alasan default.
-        // Atau, jika sisi masyarakat tidak boleh menghapus, kita bisa langsung callback gagal.
-        // Untuk saat ini, kita anggap tidak diimplementasikan dari sisi ini.
         callback.onDeleteGagal("Fungsi hapus tidak tersedia untuk pengguna ini.");
     }
 
+    //endregion
 
-    // IMPLEMENTASI DARI OperatorRepository (Sisi Operator)
+    //region Implementasi OperatorRepository (Sisi Operator)
+
     @Override
     public void getPengaduanByStatus(String status, GetPengaduanCallback callback) {
         apiService.getPengaduanOperatorByStatus(status).enqueue(new Callback<>() {
@@ -210,11 +205,11 @@ public class PengaduanRepositoryImpl implements PengaduanRepository, OperatorRep
     @Override
     public void updatePengaduan(int idPengaduan, int idOperator, String status, String catatan, List<File> files, String requestToken, UpdatePengaduanCallback callback) {
         Map<String, RequestBody> params = new HashMap<>();
-        params.put("idPengaduan", RequestBody.create(MediaType.parse("text/plain"), String.valueOf(idPengaduan)));
-        params.put("idOperator", RequestBody.create(MediaType.parse("text/plain"), String.valueOf(idOperator)));
-        params.put("status", RequestBody.create(MediaType.parse("text/plain"), status));
-        params.put("catatan", RequestBody.create(MediaType.parse("text/plain"), catatan));
-        params.put("request_token", RequestBody.create(MediaType.parse("text/plain"), requestToken));
+        params.put("idPengaduan", createPartFromString(String.valueOf(idPengaduan)));
+        params.put("idOperator", createPartFromString(String.valueOf(idOperator)));
+        params.put("status", createPartFromString(status));
+        params.put("catatan", createPartFromString(catatan));
+        params.put("request_token", createPartFromString(requestToken));
 
         List<MultipartBody.Part> fotoParts = new ArrayList<>();
         if (files != null && !files.isEmpty()) {
@@ -250,8 +245,8 @@ public class PengaduanRepositoryImpl implements PengaduanRepository, OperatorRep
 
     @Override
     public void hapusPengaduan(int idPengaduan, String alasan, DeletePengaduanCallback callback) {
-        RequestBody idPengaduanBody = RequestBody.create(MediaType.parse("text/plain"), String.valueOf(idPengaduan));
-        RequestBody alasanBody = RequestBody.create(MediaType.parse("text/plain"), alasan);
+        RequestBody idPengaduanBody = createPartFromString(String.valueOf(idPengaduan));
+        RequestBody alasanBody = createPartFromString(alasan);
 
         apiService.hapusPengaduan(idPengaduanBody, alasanBody).enqueue(new Callback<>() {
             @Override
@@ -306,5 +301,12 @@ public class PengaduanRepositoryImpl implements PengaduanRepository, OperatorRep
                 callback.onGagal("Error Jaringan: " + t.getMessage());
             }
         });
+    }
+
+    //endregion
+
+    // Metode helper untuk membuat RequestBody dari String
+    private RequestBody createPartFromString(String value) {
+        return RequestBody.create(MediaType.parse("text/plain"), value);
     }
 }

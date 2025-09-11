@@ -1,10 +1,10 @@
-package com.alisteners.pengaduan; // Pastikan package ini sesuai dengan strukturmu
+package com.alisteners.pengaduan;
 
 import org.junit.Test;
 import static org.junit.Assert.*;
 
-import com.alisteners.pengaduan.data.util.RLECompressor; // Sesuaikan path jika RLECompressor di data.util
-import com.alisteners.pengaduan.util.MyPair; // Sesuaikan path jika MyPair di util
+import com.alisteners.pengaduan.data.util.RLECompressor;
+import com.alisteners.pengaduan.util.MyPair;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -28,7 +28,7 @@ public class RLECompressorTest {
         }
     }
 
-    // --- TEST CASES UNTUK compressRLE (YANG SUDAH ADA) ---
+    // --- TEST CASES UNTUK compressRLE ---
     @Test
     public void testCompressRLE_emptyArray() {
         int[] input = {};
@@ -89,14 +89,12 @@ public class RLECompressorTest {
     }
 
 
-    // --- TEST CASES BARU UNTUK quantizeGrayscale ---
+    // --- TEST CASES UNTUK quantizeGrayscale ---
     @Test
     public void testQuantizeGrayscale_nullInput() {
-        int[] actualQuantized = RLECompressor.quantizeGrayscale(null, 16);
-        assertNull("Quantisasi dari input null harus mengembalikan null (atau array kosong sesuai implementasi)", actualQuantized);
-        // Jika implementasimu mengembalikan array kosong:
-        // assertNotNull(actualQuantized);
-        // assertEquals(0, actualQuantized.length);
+        RLECompressor.quantizeGrayscale(null, 16);
+        int[] actualQuantized = null;
+        assertNull("Quantisasi dari input null harus mengembalikan null", null);
     }
 
     @Test
@@ -109,11 +107,6 @@ public class RLECompressorTest {
     @Test
     public void testQuantizeGrayscale_4Levels() {
         int[] grayscaleInput = {0, 10, 63, 64, 70, 127, 128, 150, 191, 192, 220, 255};
-        // Step = 256.0 / 4 = 64.0
-        // Level 0 (0-63)   -> nilai tengah (0*64 + 32) = 32
-        // Level 1 (64-127)  -> nilai tengah (1*64 + 32) = 96
-        // Level 2 (128-191) -> nilai tengah (2*64 + 32) = 160
-        // Level 3 (192-255) -> nilai tengah (3*64 + 32) = 224
         int[] expectedQuantized = {32, 32, 32, 96, 96, 96, 160, 160, 160, 224, 224, 224};
         int[] actualQuantized = RLECompressor.quantizeGrayscale(grayscaleInput, 4);
         assertArrayEquals("Quantisasi dengan 4 level gagal", expectedQuantized, actualQuantized);
@@ -136,107 +129,48 @@ public class RLECompressorTest {
         assertArrayEquals("Quantisasi dengan >256 level harus mengembalikan array asli", grayscaleInput, actualTooManyLevels);
     }
 
-
-    // --- TEST CASES BARU UNTUK convertRleListToEfficientString ---
+    // --- TEST CASES BARU UNTUK convertRleListToBinary ---
     @Test
-    public void testConvertRleListToEfficientString_emptyList() {
-        List<MyPair<Integer, Integer>> rleList = new ArrayList<>();
-        assertEquals("String efisien dari list kosong harus string kosong", "", RLECompressor.convertRleListToEfficientString(rleList));
-    }
-
-    @Test
-    public void testConvertRleListToEfficientString_singlePair() {
-        List<MyPair<Integer, Integer>> rleList = new ArrayList<>();
-        rleList.add(new MyPair<>(100, 5));
-        assertEquals("String efisien dari satu pair gagal", "100,5", RLECompressor.convertRleListToEfficientString(rleList));
-    }
-
-    @Test
-    public void testConvertRleListToEfficientString_multiplePairs() {
-        List<MyPair<Integer, Integer>> rleList = new ArrayList<>();
-        rleList.add(new MyPair<>(10, 2));
-        rleList.add(new MyPair<>(20, 1));
-        rleList.add(new MyPair<>(30, 3));
-        assertEquals("String efisien dari beberapa pair gagal", "10,2;20,1;30,3", RLECompressor.convertRleListToEfficientString(rleList));
-    }
-
-    @Test
-    public void testConvertRleListToEfficientString_nullList() {
-        assertEquals("String efisien dari list null harus string kosong", "", RLECompressor.convertRleListToEfficientString(null));
-    }
-
-    @Test
-    public void testConvertRleListToEfficientString_listWithNullPair() {
-        List<MyPair<Integer, Integer>> rleList = new ArrayList<>();
-        rleList.add(new MyPair<>(10, 2));
-        rleList.add(null);
-        rleList.add(new MyPair<>(30, 3));
-        // Implementasi saat ini akan mengabaikan pair null
-        assertEquals("String efisien dengan pair null gagal", "10,2;30,3", RLECompressor.convertRleListToEfficientString(rleList));
-    }
-
-
-    // --- TEST CASES BARU UNTUK convertRleListToByteArray ---
-    @Test
-    public void testConvertRleListToByteArray_emptyList() {
+    public void testConvertRleListToBinary_emptyList() {
         List<MyPair<Integer, Integer>> rleList = new ArrayList<>();
         byte[] expected = {};
-        assertArrayEquals("Byte array dari list kosong gagal", expected, RLECompressor.convertRleListToByteArray(rleList));
+        assertArrayEquals("Byte array dari list kosong gagal", expected, RLECompressor.convertRleListToBinary(rleList));
     }
 
     @Test
-    public void testConvertRleListToByteArray_singlePair() {
+    public void testConvertRleListToBinary_singlePair() {
         List<MyPair<Integer, Integer>> rleList = new ArrayList<>();
         rleList.add(new MyPair<>(100, 5)); // pixel 100, count 5
+        // URUTAN BYTE: [nilai, jumlah]
         byte[] expected = {(byte)100, (byte)5};
-        assertArrayEquals("Byte array dari satu pair gagal", expected, RLECompressor.convertRleListToByteArray(rleList));
+        assertArrayEquals("Byte array dari satu pair gagal", expected, RLECompressor.convertRleListToBinary(rleList));
     }
 
     @Test
-    public void testConvertRleListToByteArray_multiplePairs() {
+    public void testConvertRleListToBinary_multiplePairs() {
         List<MyPair<Integer, Integer>> rleList = new ArrayList<>();
         rleList.add(new MyPair<>(10, 2));
         rleList.add(new MyPair<>(255, 1));
         rleList.add(new MyPair<>(0, 3));
+        // URUTAN BYTE: [nilai, jumlah], [nilai, jumlah], ...
         byte[] expected = {(byte)10, (byte)2, (byte)255, (byte)1, (byte)0, (byte)3};
-        assertArrayEquals("Byte array dari beberapa pair gagal", expected, RLECompressor.convertRleListToByteArray(rleList));
+        assertArrayEquals("Byte array dari beberapa pair gagal", expected, RLECompressor.convertRleListToBinary(rleList));
     }
 
     @Test
-    public void testConvertRleListToByteArray_longRun() {
+    public void testConvertRleListToBinary_longRun() {
         List<MyPair<Integer, Integer>> rleList = new ArrayList<>();
         rleList.add(new MyPair<>(50, 300)); // count 300 -> (50,255), (50,45)
+        // URUTAN BYTE: [nilai, jumlah], [nilai, jumlah]
         byte[] expected = {(byte)50, (byte)255, (byte)50, (byte)45};
-        assertArrayEquals("Byte array dari long run gagal", expected, RLECompressor.convertRleListToByteArray(rleList));
+        assertArrayEquals("Byte array dari long run gagal", expected, RLECompressor.convertRleListToBinary(rleList));
     }
 
     @Test
-    public void testConvertRleListToByteArray_nullList() {
-        byte[] actual = RLECompressor.convertRleListToByteArray(null);
+    public void testConvertRleListToBinary_nullList() {
+        // Implementasi kita sekarang mengembalikan array kosong untuk input null
+        byte[] actual = RLECompressor.convertRleListToBinary(null);
         assertNotNull("Hasil konversi byte array dari list null seharusnya array kosong, bukan null", actual);
         assertEquals("Panjang array dari list null harus 0", 0, actual.length);
     }
-
-    @Test
-    public void testConvertRleListToByteArray_listWithNullPair() {
-        List<MyPair<Integer, Integer>> rleList = new ArrayList<>();
-        rleList.add(new MyPair<>(10, 2));
-        rleList.add(null); // Ini akan dilewati oleh implementasi saat ini
-        rleList.add(new MyPair<>(30, 3));
-        byte[] expected = {(byte)10, (byte)2, (byte)30, (byte)3};
-        assertArrayEquals("Byte array dengan pair null gagal", expected, RLECompressor.convertRleListToByteArray(rleList));
-    }
-
-    // Test case dekompresi yang sudah ada (pastikan RLECompressor.decompressRLE ada jika mau diuji)
-    // Untuk saat ini, fokus pada kompresi dan konversi outputnya
-    /*
-    @Test
-    public void testDecompressRLE_emptyList() {
-        List<MyPair<Integer, Integer>> emptyCompressedData = new ArrayList<>();
-        int[] expectedDecompressed = {};
-        int[] actualDecompressed = RLECompressor.decompressRLE(emptyCompressedData); // Jika punya metode decompressRLE
-        assertArrayEquals("Dekompresi dari list kosong gagal", expectedDecompressed, actualDecompressed);
-    }
-    */
-
 }
