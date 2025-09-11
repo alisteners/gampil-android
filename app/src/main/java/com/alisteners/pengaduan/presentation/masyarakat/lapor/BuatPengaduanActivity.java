@@ -303,40 +303,6 @@ public class BuatPengaduanActivity extends AppCompatActivity {
         });
     }
 
-//    private void saveBitmapToStorage(Bitmap bitmap, String fileNamePrefix, String folderId) {
-//        if (bitmap == null) {
-//            Log.e(TAG, "Bitmap null, tidak bisa disimpan (debug): " + fileNamePrefix);
-//            return;
-//        }
-//        File directory = getExternalFilesDir(Environment.DIRECTORY_PICTURES);
-//        if (directory == null) {
-//            Log.e(TAG, "External pictures directory not available for app (debug).");
-//            return;
-//        }
-//        File rleDebugDir = new File(directory, "RLE_Debug");
-//        if (!rleDebugDir.exists()) {
-//            if (!rleDebugDir.mkdirs()) {
-//                Log.e(TAG, "Gagal membuat direktori RLE_Debug.");
-//                return;
-//            }
-//        }
-//        File reportDir = new File(rleDebugDir, folderId);
-//        if (!reportDir.exists()) {
-//            if (!reportDir.mkdirs()) {
-//                Log.e(TAG, "Gagal membuat direktori untuk laporan: " + folderId);
-//                return;
-//            }
-//        }
-//        String fileName = fileNamePrefix + ".png";
-//        File file = new File(reportDir, fileName);
-//        try (FileOutputStream out = new FileOutputStream(file)) {
-//            bitmap.compress(Bitmap.CompressFormat.PNG, 100, out);
-//            Log.d(TAG, "DEBUG Bitmap berhasil disimpan ke: " + file.getAbsolutePath());
-//        } catch (IOException e) {
-//            Log.e(TAG, "DEBUG Error saat menyimpan bitmap " + fileName, e);
-//        }
-//    }
-
     @Override
     protected void onDestroy() {
         super.onDestroy();
