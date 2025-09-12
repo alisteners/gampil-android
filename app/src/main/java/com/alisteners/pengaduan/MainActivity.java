@@ -64,6 +64,16 @@ import com.canhub.cropper.CropImageView;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
+/**
+ * Activity utama aplikasi untuk pengguna 'Masyarakat' setelah berhasil login.
+ * Bertanggung jawab untuk:
+ * - Mengelola navigasi utama menggunakan BottomNavigationView.
+ * - Menjadi host untuk fragment-fragment utama (Beranda, Riwayat, Notifikasi, Profil).
+ * - Menangani seluruh alur pelaporan baru, mulai dari pemilihan gambar (kamera/galeri)
+ * hingga cropping dan peluncuran {@link BuatPengaduanActivity}.
+ * - Mengelola izin (kamera, notifikasi).
+ * - Menjalankan mekanisme polling di background untuk memeriksa notifikasi baru.
+ */
 public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = "MainActivity";
@@ -75,7 +85,7 @@ public class MainActivity extends AppCompatActivity {
     private static final long POLLING_INTERVAL = 30000; // 30 detik
 
     private BottomNavigationView bottomNavigationView;
-    private Uri currentPhotoUri;
+    private Uri currentPhotoUri; // Menyimpan URI foto saat mengambil dari kamera
 
     // --- Deklarasi semua ActivityResultLauncher ---
     private ActivityResultLauncher<Uri> ambilFotoLauncher;
@@ -83,7 +93,7 @@ public class MainActivity extends AppCompatActivity {
     private ActivityResultLauncher<Intent> buatPengaduanLauncher;
     private ActivityResultLauncher<CropImageContractOptions> cropImageLauncher;
 
-    // Variabel untuk Notifikasi
+    // --- Variabel untuk Notifikasi ---
     private RequestQueue requestQueue;
     private SharedPreferences sharedPreferences;
     private final Handler pollingHandler = new Handler(Looper.getMainLooper());
@@ -99,34 +109,33 @@ public class MainActivity extends AppCompatActivity {
             currentPhotoUri = savedInstanceState.getParcelable(KEY_PHOTO_URI);
         }
 
-        // Inisialisasi komponen
         bottomNavigationView = findViewById(R.id.bottom_navigation_view);
         requestQueue = Volley.newRequestQueue(this);
         sharedPreferences = getSharedPreferences(LoginActivity.SHARED_PREFS, Context.MODE_PRIVATE);
 
-        // Panggil semua setup method
         initializeAllLaunchers();
         createNotificationChannel();
         checkAndRequestNotificationPermission();
         setupNavigation();
         setupPolling();
 
-        // Atur halaman awal saat aplikasi pertama kali dibuka
+        // Navigasi awal saat Activity dibuka
         if (getIntent() != null && getIntent().getBooleanExtra("BUKA_NOTIFIKASI_FRAGMENT", false)) {
+            // Jika dibuka dari notifikasi sistem, langsung ke tab Notifikasi
             bottomNavigationView.setSelectedItemId(R.id.nav_notifikasi);
             getIntent().removeExtra("BUKA_NOTIFIKASI_FRAGMENT");
         } else if (savedInstanceState == null) {
+            // Jika dibuka normal, mulai dari Beranda
             bottomNavigationView.setSelectedItemId(R.id.nav_beranda);
         }
     }
 
     /**
-     * Menginisialisasi semua ActivityResultLauncher di satu tempat.
-     * Ini adalah praktik terbaik untuk memastikan semua callback terdaftar dengan benar.
+     * Menginisialisasi semua {@link ActivityResultLauncher} yang digunakan dalam Activity ini.
+     * Ini adalah pendekatan modern untuk menangani hasil dari Activity lain.
      */
     private void initializeAllLaunchers() {
-
-        // Launcher untuk menerima hasil dari kamera
+        // Launcher untuk hasil dari TakePicture (kamera)
         ambilFotoLauncher = registerForActivityResult(new ActivityResultContracts.TakePicture(), sukses -> {
             if (sukses && currentPhotoUri != null) {
                 launchCropper(currentPhotoUri);
@@ -135,7 +144,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // Launcher untuk menerima hasil dari galeri
+        // Launcher untuk hasil dari GetContent (galeri)
         pilihGambarLauncher = registerForActivityResult(new ActivityResultContracts.GetContent(), uri -> {
             if (uri != null) {
                 launchCropper(uri);
@@ -144,7 +153,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // Launcher untuk menerima hasil dari activity cropping gambar
+        // Launcher untuk hasil dari CropImage
         cropImageLauncher = registerForActivityResult(new CropImageContract(), result -> {
             if (result.isSuccessful()) {
                 Uri croppedUri = result.getUriContent();
@@ -158,15 +167,15 @@ public class MainActivity extends AppCompatActivity {
                     buatPengaduanLauncher.launch(intent);
                 }
             } else {
-                Exception error = result.getError();
-                Toast.makeText(this, "Gagal memotong gambar: " + (error != null ? error.getMessage() : "Unknown error"), Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "Gagal memotong gambar.", Toast.LENGTH_SHORT).show();
             }
         });
 
-        // Launcher untuk menerima hasil setelah pengaduan berhasil dibuat
+        // Launcher untuk menerima sinyal kembali dari BuatPengaduanActivity
         buatPengaduanLauncher = registerForActivityResult(
                 new ActivityResultContracts.StartActivityForResult(),
                 result -> {
+                    // Jika pengaduan berhasil dibuat, kirim sinyal ke fragment lain untuk refresh.
                     if (result.getResultCode() == Activity.RESULT_OK) {
                         Log.d(TAG, "Pengaduan berhasil dibuat, mengirim sinyal 'pengaduan_baru'.");
                         getSupportFragmentManager().setFragmentResult("pengaduan_baru", new Bundle());
@@ -175,6 +184,9 @@ public class MainActivity extends AppCompatActivity {
         );
     }
 
+    /**
+     * Mengatur listener untuk BottomNavigationView dan menangani transaksi Fragment.
+     */
     private void setupNavigation() {
         bottomNavigationView.setOnItemSelectedListener(item -> {
             Fragment selectedFragment = null;
@@ -187,24 +199,9 @@ public class MainActivity extends AppCompatActivity {
             } else if (itemId == R.id.nav_profil) {
                 selectedFragment = new ProfilFragment();
             } else if (itemId == R.id.nav_lapor) {
-
-                // --- PENGATURAN MODE APLIKASI ---
-
-                // >> MODE 1: DEVELOPER (Untuk Analisis Skripsi)
-                // Menampilkan dialog untuk memilih antara Kamera atau Galeri.
+                // Untuk tombol Lapor, tidak mengganti fragment, melainkan memulai alur baru.
                 tampilkanDialogPilihGambar();
-
-                // >> MODE 2: PRODUKSI (Untuk Pengguna Akhir)
-                // Langsung membuka kamera. Hapus atau beri komentar pada baris di atas,
-                // lalu hapus komentar pada blok di bawah ini.
-                /*
-                if (checkAndRequestCameraPermission()) {
-                    bukaKameraInternal();
-                }
-                */
-
-                return false; // Mencegah pemilihan item navigasi & menjaga fragment tetap sama
-
+                return false; // Mencegah item 'Lapor' menjadi terpilih.
             } else if (itemId == R.id.nav_notifikasi) {
                 selectedFragment = new NotifikasiFragment();
                 hideNotificationBadge();
@@ -219,7 +216,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
-     * [KHUSUS MODE DEVELOPER] Menampilkan dialog untuk memilih sumber gambar.
+     * [KHUSUS MODE DEVELOPER] Menampilkan dialog untuk memilih sumber gambar (Kamera/Galeri).
+     * Untuk mode produksi, panggil bukaKameraInternal() secara langsung.
      */
     private void tampilkanDialogPilihGambar() {
         final CharSequence[] options = {"Ambil dari Kamera", "Pilih dari Galeri", "Batal"};
@@ -232,49 +230,52 @@ public class MainActivity extends AppCompatActivity {
                         }
                     } else if (options[item].equals("Pilih dari Galeri")) {
                         pilihGambarLauncher.launch("image/*");
-                    } else if (options[item].equals("Batal")) {
+                    } else {
                         dialog.dismiss();
                     }
                 })
                 .show();
     }
 
+    /**
+     * Meluncurkan activity cropping gambar dengan URI gambar sebagai input.
+     * Mengatur opsi cropping seperti rasio aspek dan resolusi output dinamis berdasarkan RAM perangkat.
+     * @param imageUri URI dari gambar yang akan di-crop.
+     */
     private void launchCropper(Uri imageUri) {
         CropImageOptions cropOptions = new CropImageOptions();
         cropOptions.guidelines = CropImageView.Guidelines.ON;
         cropOptions.fixAspectRatio = true;
         cropOptions.aspectRatioX = 4;
         cropOptions.aspectRatioY = 3;
+        cropOptions.outputCompressFormat = Bitmap.CompressFormat.JPEG;
+        cropOptions.outputCompressQuality = 90;
 
-        // Logika penyesuaian resolusi berdasarkan RAM perangkat
+        // Logika penyesuaian resolusi output dinamis berdasarkan total RAM perangkat
         ActivityManager activityManager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
         ActivityManager.MemoryInfo memoryInfo = new ActivityManager.MemoryInfo();
         activityManager.getMemoryInfo(memoryInfo);
         long totalRamMB = memoryInfo.totalMem / (1024 * 1024);
 
-        int outputWidth, outputHeight;
         if (totalRamMB < 2000) { // RAM < 2GB
-            outputWidth = 1024;
-            outputHeight = 768;
+            cropOptions.outputRequestWidth = 1024;
+            cropOptions.outputRequestHeight = 768;
         } else if (totalRamMB < 4000) { // RAM 2–4GB
-            outputWidth = 1600;
-            outputHeight = 1200;
+            cropOptions.outputRequestWidth = 1600;
+            cropOptions.outputRequestHeight = 1200;
         } else { // RAM ≥ 4GB
-            outputWidth = 2000;
-            outputHeight = 1500;
+            cropOptions.outputRequestWidth = 2000;
+            cropOptions.outputRequestHeight = 1500;
         }
-
-        cropOptions.outputRequestWidth = outputWidth;
-        cropOptions.outputRequestHeight = outputHeight;
-        cropOptions.outputRequestSizeOptions = CropImageView.RequestSizeOptions.RESIZE_INSIDE;
-
-        cropOptions.outputCompressFormat = Bitmap.CompressFormat.JPEG;
-        cropOptions.outputCompressQuality = 90;
 
         CropImageContractOptions contractOptions = new CropImageContractOptions(imageUri, cropOptions);
         cropImageLauncher.launch(contractOptions);
     }
 
+    /**
+     * Membuka intent kamera internal perangkat.
+     * Membuat file sementara untuk menyimpan hasil foto.
+     */
     private void bukaKameraInternal() {
         try {
             File photoFile = createImageFile();
@@ -283,16 +284,24 @@ public class MainActivity extends AppCompatActivity {
             ambilFotoLauncher.launch(currentPhotoUri);
         } catch (IOException ex) {
             Toast.makeText(this, "Gagal membuat file foto.", Toast.LENGTH_SHORT).show();
-            Log.e(TAG, "Gagal membuat file foto", ex);
         }
     }
 
+    /**
+     * Membuat file gambar sementara di direktori eksternal aplikasi.
+     * @return Objek File yang baru dibuat.
+     * @throws IOException Jika terjadi error saat pembuatan file.
+     */
     private File createImageFile() throws IOException {
         String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
         File storageDir = getExternalFilesDir(Environment.DIRECTORY_PICTURES);
         return File.createTempFile("JPEG_" + timeStamp + "_", ".jpg", storageDir);
     }
 
+    /**
+     * Mengganti fragment yang sedang ditampilkan di FrameLayout utama.
+     * @param fragment Fragment yang akan ditampilkan.
+     */
     private void loadFragment(Fragment fragment) {
         getSupportFragmentManager().beginTransaction()
                 .replace(R.id.main_frame_layout, fragment)
@@ -300,6 +309,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
     // --- Metode-Metode Notifikasi ---
+
+    /**
+     * Membuat Notification Channel. Diperlukan untuk Android Oreo (API 26) ke atas.
+     */
     private void createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             CharSequence name = "Notifikasi Pengaduan";
@@ -311,6 +324,9 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Mengatur mekanisme polling periodik untuk memeriksa notifikasi baru.
+     */
     private void setupPolling() {
         pollingRunnable = () -> {
             if (isFinishing() || isDestroyed()) return;
@@ -319,6 +335,9 @@ public class MainActivity extends AppCompatActivity {
         };
     }
 
+    /**
+     * Mengirim request ke server untuk memeriksa jumlah notifikasi baru.
+     */
     private void cekNotifikasiBaru() {
         int idUser = sharedPreferences.getInt(LoginActivity.KEY_ID_USER, 0);
         if (idUser == 0) return;
@@ -348,6 +367,10 @@ public class MainActivity extends AppCompatActivity {
         requestQueue.add(request);
     }
 
+    /**
+     * Menampilkan notifikasi di status bar sistem Android.
+     * @param jumlahBaru Jumlah notifikasi baru yang akan ditampilkan dalam teks notifikasi.
+     */
     private void showSystemNotification(int jumlahBaru) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
                 ActivityCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
@@ -357,7 +380,6 @@ public class MainActivity extends AppCompatActivity {
         Intent intent = new Intent(this, MainActivity.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         intent.putExtra("BUKA_NOTIFIKASI_FRAGMENT", true);
-
         PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
@@ -371,21 +393,22 @@ public class MainActivity extends AppCompatActivity {
         NotificationManagerCompat.from(this).notify(NOTIFICATION_ID, builder.build());
     }
 
+    /** Menampilkan badge (lencana) notifikasi pada item BottomNavigationView. */
     private void showNotificationBadge(int count) {
         BadgeDrawable badge = bottomNavigationView.getOrCreateBadge(R.id.nav_notifikasi);
         badge.setVisible(true);
         badge.setNumber(count);
     }
 
+    /** Menyembunyikan badge notifikasi. */
     private void hideNotificationBadge() {
-        BadgeDrawable badge = bottomNavigationView.getOrCreateBadge(R.id.nav_notifikasi);
-        badge.setVisible(false);
+        bottomNavigationView.getOrCreateBadge(R.id.nav_notifikasi).setVisible(false);
     }
 
     /**
-     * Metode ini dipanggil oleh NotifikasiFragment untuk memperbarui badge
-     * setelah notifikasi selesai dimuat atau dibaca.
-     * @param count Jumlah notifikasi baru.
+     * Metode publik yang dapat dipanggil oleh fragment (misalnya {@link NotifikasiFragment})
+     * untuk memperbarui tampilan badge.
+     * @param count Jumlah notifikasi baru yang tersisa.
      */
     public void updateNotificationBadge(int count) {
         if (count > 0) {
@@ -396,6 +419,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     // --- Metode-Metode Izin (Permissions) ---
+
     private boolean checkAndRequestCameraPermission() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, REQUEST_CAMERA_PERMISSION);
@@ -435,7 +459,8 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        pollingHandler.post(pollingRunnable);
+        pollingHandler.post(pollingRunnable); // Mulai polling saat aplikasi aktif
+        // Logika untuk menangani pembukaan dari notifikasi
         if (getIntent() != null && getIntent().getBooleanExtra("BUKA_NOTIFIKASI_FRAGMENT", false)) {
             bottomNavigationView.setSelectedItemId(R.id.nav_notifikasi);
             getIntent().removeExtra("BUKA_NOTIFIKASI_FRAGMENT");
@@ -445,8 +470,10 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onPause() {
         super.onPause();
-        pollingHandler.removeCallbacks(pollingRunnable);
+        pollingHandler.removeCallbacks(pollingRunnable); // Hentikan polling saat aplikasi tidak aktif
     }
+
+
 
     @Override
     protected void onSaveInstanceState(@NonNull Bundle outState) {
@@ -456,6 +483,11 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Mendapatkan ukuran file (dalam bytes) dari sebuah URI.
+     * @param uri URI dari file.
+     * @return Ukuran file dalam bytes, atau 0 jika gagal.
+     */
     private long getFileSizeFromUri(Uri uri) {
         try (Cursor cursor = getContentResolver().query(uri, null, null, null, null)) {
             if (cursor != null && cursor.moveToFirst()) {

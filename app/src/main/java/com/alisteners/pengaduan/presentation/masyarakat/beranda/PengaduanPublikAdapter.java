@@ -24,25 +24,50 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
+/**
+ * Adapter untuk {@link RecyclerView} yang menampilkan daftar pengaduan publik.
+ * Kelas ini bertanggung jawab untuk mengambil data dari list {@link PengaduanPublikItem}
+ * dan menampilkannya ke dalam layout item_pengaduan_publik.xml.
+ */
 public class PengaduanPublikAdapter extends RecyclerView.Adapter<PengaduanPublikAdapter.PengaduanPublikViewHolder> {
 
     private final List<PengaduanPublikItem> pengaduanItems;
     private final Context context;
     private OnItemClickListener listener;
 
+    /**
+     * Interface untuk menangani event klik pada item di RecyclerView.
+     */
     public interface OnItemClickListener {
+        /**
+         * Dipanggil ketika sebuah item di-klik.
+         * @param item Objek {@link PengaduanPublikItem} yang di-klik.
+         */
         void onItemClick(PengaduanPublikItem item);
     }
 
+    /**
+     * Konstruktor untuk adapter.
+     * @param pengaduanItems List awal dari data pengaduan.
+     * @param context Context dari Fragment atau Activity.
+     */
     public PengaduanPublikAdapter(List<PengaduanPublikItem> pengaduanItems, Context context) {
         this.pengaduanItems = pengaduanItems;
         this.context = context;
     }
 
+    /**
+     * Mendaftarkan listener untuk event klik item.
+     * @param listener Implementasi dari {@link OnItemClickListener}.
+     */
     public void setOnItemClickListener(OnItemClickListener listener) {
         this.listener = listener;
     }
 
+    /**
+     * Dipanggil oleh RecyclerView untuk membuat ViewHolder baru.
+     * Metode ini meng-inflate layout item dan menginisialisasi ViewHolder.
+     */
     @NonNull
     @Override
     public PengaduanPublikViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
@@ -50,26 +75,46 @@ public class PengaduanPublikAdapter extends RecyclerView.Adapter<PengaduanPublik
         return new PengaduanPublikViewHolder(view);
     }
 
+    /**
+     * Dipanggil oleh RecyclerView untuk menampilkan data pada posisi tertentu.
+     * Metode ini mengikat (bind) data dari objek {@link PengaduanPublikItem} ke view
+     * di dalam ViewHolder.
+     */
     @Override
     public void onBindViewHolder(@NonNull PengaduanPublikViewHolder holder, int position) {
         PengaduanPublikItem item = pengaduanItems.get(position);
         holder.bind(item, listener);
     }
 
+    /**
+     * Mengembalikan jumlah total item dalam dataset.
+     */
     @Override
     public int getItemCount() {
         return pengaduanItems != null ? pengaduanItems.size() : 0;
     }
 
+    /**
+     * Memperbarui dataset adapter dengan daftar item yang baru dan memberitahu
+     * RecyclerView untuk me-render ulang tampilannya.
+     * @param newItems List baru dari {@link PengaduanPublikItem}.
+     */
     @SuppressLint("NotifyDataSetChanged")
     public void updateData(List<PengaduanPublikItem> newItems) {
         pengaduanItems.clear();
         if (newItems != null) {
             pengaduanItems.addAll(newItems);
         }
+        // notifyDataSetChanged digunakan untuk kesederhanaan. Untuk performa yang lebih baik
+        // pada daftar yang sangat besar, pertimbangkan menggunakan DiffUtil.
         notifyDataSetChanged();
     }
 
+    /**
+     * ViewHolder yang merepresentasikan satu item dalam RecyclerView.
+     * Kelas ini menyimpan referensi ke view-view di dalam layout item dan
+     * berisi logika untuk mengikat data ke view tersebut.
+     */
     class PengaduanPublikViewHolder extends RecyclerView.ViewHolder {
         ImageView imageViewThumbnail;
         TextView textViewKategori, textViewTanggal, textViewNamaPelapor, textViewDeskripsi;
@@ -85,12 +130,15 @@ public class PengaduanPublikAdapter extends RecyclerView.Adapter<PengaduanPublik
             chipStatus = itemView.findViewById(R.id.chipPublikStatus);
         }
 
+        /**
+         * Mengikat data dari objek item ke komponen UI di dalam ViewHolder.
+         * @param item Objek {@link PengaduanPublikItem} yang berisi data.
+         * @param listener Listener untuk menangani klik pada item.
+         */
         void bind(final PengaduanPublikItem item, final OnItemClickListener listener) {
 
             textViewKategori.setText(item.getKategori());
             textViewTanggal.setText(formatTanggal(item.getTanggalPengaduan()));
-            // LOG INI UNTUK MEMERIKSA DATA ASLI
-            Log.d("AdapterDebug", "Isi dari item.getNamaPelapor(): '" + item.getNamaPelapor() + "'");
             textViewNamaPelapor.setText(item.getNamaPelapor());
             textViewDeskripsi.setText(item.getDeskripsiSingkat());
 
@@ -98,17 +146,13 @@ public class PengaduanPublikAdapter extends RecyclerView.Adapter<PengaduanPublik
 
             String path = item.getPathImage();
 
-            // Cek jika path valid
             if (path != null && !path.isEmpty() && !path.equalsIgnoreCase("null")) {
                 String imageUrl = ApiConfig.BASE_URL + path;
-
-                // LOGGING YANG SANGAT PENTING
                 Log.d("PengaduanPublikAdapter", "Memuat gambar dari URL: " + imageUrl);
-
                 Glide.with(context)
                         .load(imageUrl)
                         .placeholder(R.drawable.ic_image_placeholder)
-                        .error(R.drawable.ic_image_error) // Tampilkan ikon error jika gagal
+                        .error(R.drawable.ic_image_error)
                         .into(imageViewThumbnail);
             } else {
                 Log.w("PengaduanPublikAdapter", "Path gambar null atau kosong untuk item: " + item.getKategori());
@@ -122,6 +166,11 @@ public class PengaduanPublikAdapter extends RecyclerView.Adapter<PengaduanPublik
             });
         }
 
+        /**
+         * Memformat string tanggal dari format "yyyy-MM-dd HH:mm:ss" menjadi "dd MMMM yyyy".
+         * @param tanggalMySQL String tanggal dari server.
+         * @return String tanggal yang sudah diformat.
+         */
         private String formatTanggal(String tanggalMySQL) {
             if (tanggalMySQL == null) return "";
             SimpleDateFormat inputFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
@@ -134,13 +183,16 @@ public class PengaduanPublikAdapter extends RecyclerView.Adapter<PengaduanPublik
             }
         }
 
+        /**
+         * Mengatur tampilan Chip (teks, warna, ikon) berdasarkan status pengaduan.
+         * @param status String status dari item pengaduan.
+         */
         private void setupChipStatus(String status) {
             if (status == null) {
                 chipStatus.setVisibility(View.GONE);
                 return;
             }
             chipStatus.setVisibility(View.VISIBLE);
-
             chipStatus.setText(StringUtils.capitalizeFirstLetter(status));
 
             int backgroundColorRes;

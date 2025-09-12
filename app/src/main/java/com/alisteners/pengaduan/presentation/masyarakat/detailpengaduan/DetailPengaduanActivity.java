@@ -5,7 +5,6 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.util.TypedValue;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.ImageView;
@@ -47,8 +46,14 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
+/**
+ * Activity yang menampilkan detail lengkap dari sebuah pengaduan.
+ * Bertanggung jawab untuk mengambil data dari ViewModel, menampilkannya ke berbagai
+ * komponen UI, termasuk informasi dasar, analisis kompresi, dan timeline tindak lanjut.
+ */
 public class DetailPengaduanActivity extends AppCompatActivity {
 
+    /** Kunci (key) yang digunakan untuk mengirim ID pengaduan melalui Intent. */
     public static final String EXTRA_PENGADUAN_ID = "extra_pengaduan_id";
     private DetailPengaduanViewModel viewModel;
 
@@ -64,10 +69,10 @@ public class DetailPengaduanActivity extends AppCompatActivity {
             textViewDetailRasioStandar, textViewDetailWaktu;
     private TextView textViewRasioVsAsli, textViewRasioVsResize, textViewRasioVsGrayscale;
     private TextView textViewSpaceSavingVsAsli, textViewSpaceSavingVsResize, textViewSpaceSavingVsGrayscale;
-    // --- Deklarasi untuk Timeline ---
     private RecyclerView recyclerViewLogStatus;
     private LogStatusAdapter logStatusAdapter;
 
+    // --- View untuk Fitur "Mode Penelitian" ---
     private com.google.android.material.card.MaterialCardView cardViewAnalisis;
     private LinearLayout layoutDimensi, layoutUkuranResize, layoutUkuranGrayscale, layoutInfoTambahan;
     private int tapCount = 0;
@@ -84,22 +89,7 @@ public class DetailPengaduanActivity extends AppCompatActivity {
         setupViewModel();
         setupRecyclerView();
         observeViewModel();
-
-        cardViewAnalisis.setOnClickListener(v -> {
-            tapHandler.removeCallbacks(tapResetRunnable);
-            tapCount++;
-            if (tapCount == 2) {
-                Toast.makeText(this, "Mode Penelitian Diaktifkan!", Toast.LENGTH_SHORT).show();
-                // Toggle visibility untuk semua layout tersembunyi
-                int newVisibility = layoutDimensi.getVisibility() == View.VISIBLE ? View.GONE : View.VISIBLE;
-                layoutDimensi.setVisibility(newVisibility);
-                layoutUkuranResize.setVisibility(newVisibility);
-                layoutUkuranGrayscale.setVisibility(newVisibility);
-                layoutInfoTambahan.setVisibility(newVisibility);
-                tapCount = 0; // Reset
-            }
-            tapHandler.postDelayed(tapResetRunnable, 1000); // Reset dalam 1 detik
-        });
+        setupListeners();
 
         int idPengaduan = getIntent().getIntExtra(EXTRA_PENGADUAN_ID, -1);
         if (idPengaduan != -1) {
@@ -110,6 +100,9 @@ public class DetailPengaduanActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Menginisialisasi semua referensi ke komponen view dari layout XML.
+     */
     private void inisialisasiView() {
         progressBar = findViewById(R.id.progressBarDetail);
         imageViewDetailFoto = findViewById(R.id.imageViewDetailFoto);
@@ -119,8 +112,6 @@ public class DetailPengaduanActivity extends AppCompatActivity {
         chipDetailStatus = findViewById(R.id.chipDetailStatus);
         textViewDetailLokasi = findViewById(R.id.textViewDetailLokasi);
         textViewDetailDeskripsi = findViewById(R.id.textViewDetailDeskripsi);
-
-        // Inisialisasi TextView untuk data analisis
         textViewDetailDimensi = findViewById(R.id.textViewDetailDimensi);
         textViewDetailUkuranAsli = findViewById(R.id.textViewDetailUkuranAsli);
         textViewDetailUkuranResize = findViewById(R.id.textViewDetailUkuranResize);
@@ -129,25 +120,23 @@ public class DetailPengaduanActivity extends AppCompatActivity {
         textViewDetailRasioHemat = findViewById(R.id.textViewDetailRasioHematRuang);
         textViewDetailRasioStandar = findViewById(R.id.textViewDetailRasioStandar);
         textViewDetailWaktu = findViewById(R.id.textViewDetailWaktu);
-        ProgressBar progressBarRasio = findViewById(R.id.progressBarRasio);
-
-        // Inisialisasi view untuk fitur rahasia
         cardViewAnalisis = findViewById(R.id.card_view_analisis);
         layoutDimensi = findViewById(R.id.layout_dimensi);
         layoutUkuranResize = findViewById(R.id.layout_ukuran_resize);
         layoutUkuranGrayscale = findViewById(R.id.layout_ukuran_grayscale);
-        layoutInfoTambahan = findViewById(R.id.layout_info_tambahan); // Tambahkan ini
+        layoutInfoTambahan = findViewById(R.id.layout_info_tambahan);
         textViewRasioVsAsli = findViewById(R.id.textViewRasioVsAsli);
         textViewRasioVsResize = findViewById(R.id.textViewRasioVsResize);
         textViewRasioVsGrayscale = findViewById(R.id.textViewRasioVsGrayscale);
         textViewSpaceSavingVsAsli = findViewById(R.id.textViewSpaceSavingVsAsli);
         textViewSpaceSavingVsResize = findViewById(R.id.textViewSpaceSavingVsResize);
         textViewSpaceSavingVsGrayscale = findViewById(R.id.textViewSpaceSavingVsGrayscale);
-
-        // Inisialisasi RecyclerView untuk timeline
         recyclerViewLogStatus = findViewById(R.id.recyclerViewLogStatusMasyarakat);
     }
 
+    /**
+     * Mengatur Toolbar, termasuk tombol kembali (up button).
+     */
     private void setupToolbar() {
         Toolbar toolbar = findViewById(R.id.toolbarDetail);
         setSupportActionBar(toolbar);
@@ -157,6 +146,9 @@ public class DetailPengaduanActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Menginisialisasi ViewModel menggunakan ViewModelFactory untuk menyuntikkan dependensi.
+     */
     private void setupViewModel() {
         PengaduanRepository pengaduanRepo = new PengaduanRepositoryImpl(getApplicationContext());
         GetDetailPengaduanUseCase getDetailUseCase = new GetDetailPengaduanUseCase(pengaduanRepo);
@@ -164,14 +156,40 @@ public class DetailPengaduanActivity extends AppCompatActivity {
         viewModel = new ViewModelProvider(this, factory).get(DetailPengaduanViewModel.class);
     }
 
+    /**
+     * Mengatur RecyclerView untuk menampilkan timeline tindak lanjut.
+     */
     private void setupRecyclerView() {
         recyclerViewLogStatus.setLayoutManager(new LinearLayoutManager(this));
         recyclerViewLogStatus.setNestedScrollingEnabled(false);
-        // Gunakan kembali adapter yang sama dari sisi operator
         logStatusAdapter = new LogStatusAdapter(new ArrayList<>(), this);
         recyclerViewLogStatus.setAdapter(logStatusAdapter);
     }
 
+    /**
+     * Mengatur listener untuk "Mode Penelitian", di mana double-tap pada kartu analisis
+     * akan menampilkan/menyembunyikan data teknis tambahan.
+     */
+    private void setupListeners() {
+        cardViewAnalisis.setOnClickListener(v -> {
+            tapHandler.removeCallbacks(tapResetRunnable);
+            tapCount++;
+            if (tapCount == 2) {
+                Toast.makeText(this, "Mode Penelitian Diaktifkan!", Toast.LENGTH_SHORT).show();
+                int newVisibility = layoutDimensi.getVisibility() == View.VISIBLE ? View.GONE : View.VISIBLE;
+                layoutDimensi.setVisibility(newVisibility);
+                layoutUkuranResize.setVisibility(newVisibility);
+                layoutUkuranGrayscale.setVisibility(newVisibility);
+                layoutInfoTambahan.setVisibility(newVisibility);
+                tapCount = 0; // Reset
+            }
+            tapHandler.postDelayed(tapResetRunnable, 1000); // Reset dalam 1 detik
+        });
+    }
+
+    /**
+     * Mengamati LiveData dari ViewModel untuk memperbarui UI secara reaktif.
+     */
     private void observeViewModel() {
         viewModel.isLoading.observe(this, isLoading -> {
             if (isLoading != null) progressBar.setVisibility(isLoading ? View.VISIBLE : View.GONE);
@@ -184,6 +202,10 @@ public class DetailPengaduanActivity extends AppCompatActivity {
         viewModel.detailPengaduan.observe(this, this::populateUi);
     }
 
+    /**
+     * Mengisi semua komponen UI dengan data dari objek {@link DetailPengaduan}.
+     * @param detail Objek detail pengaduan yang diterima dari ViewModel.
+     */
     @SuppressLint({"NotifyDataSetChanged", "SetTextI18n"})
     private void populateUi(DetailPengaduan detail) {
         if (detail == null) {
@@ -191,23 +213,19 @@ public class DetailPengaduanActivity extends AppCompatActivity {
             return;
         }
 
-        // Mengisi data utama
+        // --- Mengisi Data Utama ---
         collapsingToolbar.setTitle(detail.kategori);
-        TextView textViewJudulToolbar = findViewById(R.id.textViewJudulToolbar);
-        textViewJudulToolbar.setText(detail.kategori);
+        ((TextView) findViewById(R.id.textViewJudulToolbar)).setText(detail.kategori);
         textViewDetailKategori.setText(detail.kategori);
         textViewDetailTanggal.setText(formatTanggal(detail.tanggalPengaduan));
         textViewDetailLokasi.setText(detail.lokasi);
         textViewDetailDeskripsi.setText(detail.deskripsi);
         setupChipStatus(detail.status);
 
-        // Mengisi data analisis kompresi
+        // --- Mengisi Data Analisis Kompresi ---
         long jumlahPiksel = (long) detail.lebar * detail.tinggi;
         NumberFormat formatter = NumberFormat.getInstance(new Locale("id", "ID"));
-        textViewDetailDimensi.setText(String.format(Locale.US, "%dx%d (%s Piksel)",
-                detail.lebar,
-                detail.tinggi,
-                formatter.format(jumlahPiksel)));
+        textViewDetailDimensi.setText(String.format(Locale.US, "%dx%d (%s Piksel)", detail.lebar, detail.tinggi, formatter.format(jumlahPiksel)));
         textViewDetailUkuranAsli.setText(formatUkuranBytes(detail.ukuranAsli));
         textViewDetailUkuranResize.setText(formatUkuranBytes(detail.ukuranSetelahResize));
         textViewDetailUkuranGrayscale.setText(formatUkuranBytes(detail.ukuranGrayscale));
@@ -215,29 +233,22 @@ public class DetailPengaduanActivity extends AppCompatActivity {
         textViewDetailRasioStandar.setText(String.format(Locale.US, "%.2f %%", detail.rasioKompresiStandar));
         textViewDetailRasioHemat.setText(String.format(Locale.US, "%.2f %%", detail.rasioKompresiRLE));
         ((ProgressBar) findViewById(R.id.progressBarRasio)).setProgress((int) Math.round(detail.rasioKompresiRLE));
-        DecimalFormat df = new DecimalFormat("#.##"); // Tampilkan hingga 2 desimal jika ada
+        DecimalFormat df = new DecimalFormat("#.##");
         String detikFormatted = df.format(detail.waktuProsesGambarMs / 1000.0);
         textViewDetailWaktu.setText(String.format(Locale.US, "Waktu Proses Kompresi : %d ms (%s detik)", detail.waktuProsesGambarMs, detikFormatted));
 
-        // Hitung dan tampilkan rasio kompresi perbandingan
-        double rasioVsAsli = hitungRasio(detail.ukuranFileRLEByte, detail.ukuranAsli);
-        double rasioVsResize = hitungRasio(detail.ukuranFileRLEByte, detail.ukuranSetelahResize);
-        double rasioVsGrayscale = hitungRasio(detail.ukuranFileRLEByte, detail.ukuranGrayscale);
-        textViewRasioVsAsli.setText(String.format(Locale.US, "%.2f %%", rasioVsAsli));
-        textViewRasioVsResize.setText(String.format(Locale.US, "%.2f %%", rasioVsResize));
-        textViewRasioVsGrayscale.setText(String.format(Locale.US, "%.2f %%", rasioVsGrayscale));
-        // Hitung dan tampilkan space saving perbandingan
-        double spaceSavingVsAsli = hitungSpaceSaving(detail.ukuranFileRLEByte, detail.ukuranAsli);
-        double spaceSavingVsResize = hitungSpaceSaving(detail.ukuranFileRLEByte, detail.ukuranSetelahResize);
-        double spaceSavingVsGrayscale = hitungSpaceSaving(detail.ukuranFileRLEByte, detail.ukuranGrayscale);
-        textViewSpaceSavingVsAsli.setText(String.format(Locale.US, "%.2f %%", spaceSavingVsAsli));
-        textViewSpaceSavingVsResize.setText(String.format(Locale.US, "%.2f %%", spaceSavingVsResize));
-        textViewSpaceSavingVsGrayscale.setText(String.format(Locale.US, "%.2f %%", spaceSavingVsGrayscale));
+        // --- Mengisi Data "Mode Penelitian" ---
+        textViewRasioVsAsli.setText(String.format(Locale.US, "%.2f %%", hitungRasio(detail.ukuranFileRLEByte, detail.ukuranAsli)));
+        textViewRasioVsResize.setText(String.format(Locale.US, "%.2f %%", hitungRasio(detail.ukuranFileRLEByte, detail.ukuranSetelahResize)));
+        textViewRasioVsGrayscale.setText(String.format(Locale.US, "%.2f %%", hitungRasio(detail.ukuranFileRLEByte, detail.ukuranGrayscale)));
+        textViewSpaceSavingVsAsli.setText(String.format(Locale.US, "%.2f %%", hitungSpaceSaving(detail.ukuranFileRLEByte, detail.ukuranAsli)));
+        textViewSpaceSavingVsResize.setText(String.format(Locale.US, "%.2f %%", hitungSpaceSaving(detail.ukuranFileRLEByte, detail.ukuranSetelahResize)));
+        textViewSpaceSavingVsGrayscale.setText(String.format(Locale.US, "%.2f %%", hitungSpaceSaving(detail.ukuranFileRLEByte, detail.ukuranGrayscale)));
 
-        // Mengisi RecyclerView Timeline
+        // --- Mengisi Timeline Tindak Lanjut ---
         if (detail.getRiwayatTindakLanjut() != null && !detail.getRiwayatTindakLanjut().isEmpty()) {
             List<LogStatusItem> riwayat = new ArrayList<>(detail.getRiwayatTindakLanjut());
-            Collections.reverse(riwayat);
+            Collections.reverse(riwayat); // Balik urutan agar yang terbaru di atas.
             logStatusAdapter.updateData(riwayat);
             recyclerViewLogStatus.setVisibility(View.VISIBLE);
         } else {
@@ -245,7 +256,7 @@ public class DetailPengaduanActivity extends AppCompatActivity {
             recyclerViewLogStatus.setVisibility(View.GONE);
         }
 
-        // Memuat gambar utama pengaduan
+        // --- Memuat Gambar Utama ---
         if (detail.pathImage != null && !detail.pathImage.isEmpty()) {
             final String imageUrl = ApiConfig.BASE_URL + detail.pathImage;
             Glide.with(this).load(imageUrl).placeholder(R.drawable.ic_image_placeholder).error(R.drawable.ic_image_error).into(imageViewDetailFoto);
@@ -257,22 +268,16 @@ public class DetailPengaduanActivity extends AppCompatActivity {
         }
     }
 
+    // --- Metode Helper ---
+
     private double hitungRasio(long ukuranSetelah, long ukuranSebelum) {
-        if (ukuranSebelum == 0) {
-            return 0.0; // Hindari pembagian dengan nol
-        }
+        if (ukuranSebelum == 0) return 0.0;
         return ((double) ukuranSetelah / ukuranSebelum) * 100.0;
     }
-    
-    private double hitungSpaceSaving(long ukuranSetelah, long ukuranSebelum) {
-        if (ukuranSebelum == 0) {
-            return 0.0; // Hindari pembagian dengan nol
-        }
-        return (1.0 - ((double) ukuranSetelah / ukuranSebelum)) * 100.0;
-    }
 
-    private int dpToPx(int dp) {
-        return (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, dp, getResources().getDisplayMetrics());
+    private double hitungSpaceSaving(long ukuranSetelah, long ukuranSebelum) {
+        if (ukuranSebelum == 0) return 0.0;
+        return (1.0 - ((double) ukuranSetelah / ukuranSebelum)) * 100.0;
     }
 
     private void setupChipStatus(String status) {
@@ -299,24 +304,13 @@ public class DetailPengaduanActivity extends AppCompatActivity {
     }
 
     private String formatUkuranBytes(long ukuranDalamBytes) {
-        // Jika kurang dari 1 KB, tampilkan sebagai Bytes
-        if (ukuranDalamBytes < 1024) {
-            return ukuranDalamBytes + " B";
-        }
-
-        // Jika kurang dari 1 MB, tampilkan sebagai KiloBytes
+        if (ukuranDalamBytes < 1024) return ukuranDalamBytes + " B";
         final double kilobyte = ukuranDalamBytes / 1024.0;
         if (kilobyte < 1024) {
-            // Gunakan pola ini untuk selalu menampilkan 2 angka desimal
-            DecimalFormat df = new DecimalFormat("#,##0.00");
-            return df.format(kilobyte) + " KB";
+            return new DecimalFormat("#,##0.00").format(kilobyte) + " KB";
         }
-
-        // Jika lebih dari 1 MB, tampilkan sebagai MegaBytes
         final double megabyte = kilobyte / 1024.0;
-        // Gunakan pola ini untuk selalu menampilkan 2 angka desimal
-        DecimalFormat df = new DecimalFormat("#,##0.00");
-        return df.format(megabyte) + " MB";
+        return new DecimalFormat("#,##0.00").format(megabyte) + " MB";
     }
 
     @Override

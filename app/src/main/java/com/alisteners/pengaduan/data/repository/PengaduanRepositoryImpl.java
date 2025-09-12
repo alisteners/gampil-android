@@ -30,17 +30,37 @@ import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
+/**
+ * Implementasi konkret dari {@link PengaduanRepository} dan {@link OperatorRepository}.
+ * Kelas ini berfungsi sebagai satu-satunya sumber kebenaran (Single Source of Truth) untuk data pengaduan.
+ * Bertanggung jawab untuk mengambil data dari server melalui {@link ApiService} dan menyampaikannya
+ * kembali ke lapisan domain (UseCases) melalui callback.
+ */
 public class PengaduanRepositoryImpl implements PengaduanRepository, OperatorRepository {
 
     private static final String TAG = "PengaduanRepoImpl";
     private final ApiService apiService;
 
+    /**
+     * Konstruktor untuk PengaduanRepositoryImpl.
+     * @param context Context aplikasi, digunakan untuk inisialisasi ApiClient.
+     */
     public PengaduanRepositoryImpl(Context context) {
         this.apiService = ApiClient.getApiService();
     }
 
     //region Implementasi PengaduanRepository (Sisi Masyarakat)
 
+    /**
+     * Mengirim semua data pengaduan yang telah diproses, termasuk file, ke server.
+     * Metode ini mengemas semua parameter teks dan file (data utama dan thumbnail)
+     * ke dalam format multipart/form-data untuk dikirim melalui Retrofit.
+     *
+     * @param dataPengaduan Objek {@link PengaduanData} yang berisi semua informasi dan metrik pengaduan.
+     * @param fileData File data utama yang akan diunggah (bisa .rle atau .jpg). Boleh null.
+     * @param fileThumbnail File thumbnail gambar (selalu .jpg). Tidak boleh null.
+     * @param callback Callback untuk memberitahukan status pengiriman (berhasil/gagal).
+     */
     @Override
     public void kirimPengaduanKeServer(PengaduanData dataPengaduan, @Nullable File fileData, @Nullable File fileThumbnail, KirimPengaduanCallback callback) {
         Log.d(TAG, "Mempersiapkan pengiriman pengaduan ke server...");
@@ -83,7 +103,7 @@ public class PengaduanRepositoryImpl implements PengaduanRepository, OperatorRep
             return;
         }
 
-        // 4. Melakukan panggilan API
+        // 4. Melakukan panggilan API secara asynchronous
         apiService.kirimPengaduanDenganFile(params, fileDataPart, fileThumbnailPart).enqueue(new Callback<>() {
             @Override
             public void onResponse(@NonNull Call<PengaduanResponse> call, @NonNull Response<PengaduanResponse> response) {
@@ -105,6 +125,11 @@ public class PengaduanRepositoryImpl implements PengaduanRepository, OperatorRep
         });
     }
 
+    /**
+     * Mengambil daftar riwayat pengaduan untuk seorang pengguna dari server.
+     * @param idUser ID pengguna yang riwayatnya akan diambil.
+     * @param callback Callback untuk menangani hasil pengambilan data.
+     */
     @Override
     public void getRiwayatPengaduan(int idUser, GetRiwayatCallback callback) {
         apiService.getRiwayatPengaduan(idUser).enqueue(new Callback<>() {
@@ -128,6 +153,11 @@ public class PengaduanRepositoryImpl implements PengaduanRepository, OperatorRep
         });
     }
 
+    /**
+     * Mengambil detail lengkap dari satu pengaduan spesifik.
+     * @param idPengaduan ID pengaduan yang akan diambil detailnya.
+     * @param callback Callback untuk menangani hasil pengambilan data.
+     */
     @Override
     public void getDetailPengaduan(int idPengaduan, GetDetailCallback callback) {
         apiService.getDetailPengaduan(idPengaduan).enqueue(new Callback<>() {
@@ -151,6 +181,11 @@ public class PengaduanRepositoryImpl implements PengaduanRepository, OperatorRep
         });
     }
 
+    /**
+     * Mengambil daftar pengaduan publik dari server.
+     * @param status Status pengaduan untuk filtering (misal: "Selesai").
+     * @param callback Callback untuk menangani hasil pengambilan data.
+     */
     @Override
     public void getPengaduanPublik(String status, GetPengaduanPublikCallback callback) {
         apiService.getPengaduanPublik(status).enqueue(new Callback<>() {
@@ -174,6 +209,11 @@ public class PengaduanRepositoryImpl implements PengaduanRepository, OperatorRep
         });
     }
 
+    /**
+     * Placeholder untuk fungsi hapus dari sisi masyarakat (tidak diimplementasikan).
+     * @param idPengaduan ID pengaduan.
+     * @param callback Callback.
+     */
     @Override
     public void hapusPengaduan(int idPengaduan, DeletePengaduanCallback callback) {
         callback.onDeleteGagal("Fungsi hapus tidak tersedia untuk pengguna ini.");
@@ -183,6 +223,11 @@ public class PengaduanRepositoryImpl implements PengaduanRepository, OperatorRep
 
     //region Implementasi OperatorRepository (Sisi Operator)
 
+    /**
+     * Mengambil daftar pengaduan untuk operator, difilter berdasarkan status.
+     * @param status Status pengaduan yang akan diambil.
+     * @param callback Callback untuk menangani hasil pengambilan data.
+     */
     @Override
     public void getPengaduanByStatus(String status, GetPengaduanCallback callback) {
         apiService.getPengaduanOperatorByStatus(status).enqueue(new Callback<>() {
@@ -202,6 +247,16 @@ public class PengaduanRepositoryImpl implements PengaduanRepository, OperatorRep
         });
     }
 
+    /**
+     * Memperbarui status, catatan, dan foto tindak lanjut dari sebuah pengaduan oleh operator.
+     * @param idPengaduan ID pengaduan yang akan diperbarui.
+     * @param idOperator ID operator yang melakukan aksi.
+     * @param status Status baru pengaduan.
+     * @param catatan Catatan dari operator.
+     * @param files Daftar file foto bukti tindak lanjut.
+     * @param requestToken Token untuk validasi.
+     * @param callback Callback untuk menangani hasil pembaruan.
+     */
     @Override
     public void updatePengaduan(int idPengaduan, int idOperator, String status, String catatan, List<File> files, String requestToken, UpdatePengaduanCallback callback) {
         Map<String, RequestBody> params = new HashMap<>();
@@ -243,6 +298,12 @@ public class PengaduanRepositoryImpl implements PengaduanRepository, OperatorRep
         });
     }
 
+    /**
+     * Menghapus sebuah pengaduan dari server (aksi operator).
+     * @param idPengaduan ID pengaduan yang akan dihapus.
+     * @param alasan Alasan penghapusan.
+     * @param callback Callback untuk menangani hasil penghapusan.
+     */
     @Override
     public void hapusPengaduan(int idPengaduan, String alasan, DeletePengaduanCallback callback) {
         RequestBody idPengaduanBody = createPartFromString(String.valueOf(idPengaduan));
@@ -265,6 +326,10 @@ public class PengaduanRepositoryImpl implements PengaduanRepository, OperatorRep
         });
     }
 
+    /**
+     * Mengambil data rekapitulasi statistik dari server.
+     * @param callback Callback untuk menangani hasil pengambilan data.
+     */
     @Override
     public void getRekapData(GetRekapCallback callback) {
         apiService.getRekapStatistik().enqueue(new Callback<>() {
@@ -284,6 +349,12 @@ public class PengaduanRepositoryImpl implements PengaduanRepository, OperatorRep
         });
     }
 
+    /**
+     * Melakukan pencarian pengaduan di server.
+     * @param keyword Kata kunci untuk pencarian.
+     * @param status Status untuk memfilter pencarian.
+     * @param callback Callback untuk menangani hasil pencarian.
+     */
     @Override
     public void searchPengaduan(String keyword, String status, GetPengaduanCallback callback) {
         apiService.searchPengaduan(keyword, status).enqueue(new Callback<>() {
@@ -305,7 +376,12 @@ public class PengaduanRepositoryImpl implements PengaduanRepository, OperatorRep
 
     //endregion
 
-    // Metode helper untuk membuat RequestBody dari String
+    /**
+     * Metode helper untuk membuat {@link RequestBody} dari sebuah String.
+     * Digunakan untuk mengemas parameter teks dalam request multipart.
+     * @param value String yang akan dikonversi.
+     * @return Objek RequestBody.
+     */
     private RequestBody createPartFromString(String value) {
         return RequestBody.create(MediaType.parse("text/plain"), value);
     }

@@ -6,19 +6,41 @@ import androidx.lifecycle.ViewModelProvider;
 
 import com.alisteners.pengaduan.domain.operator.usecase.GetPengaduanOperatorUseCase;
 
+/**
+ * Factory class yang bertanggung jawab untuk membuat instance dari {@link OperatorListViewModel}.
+ * Kelas ini diperlukan agar ViewModel dapat menerima dependensi (dalam hal ini,
+ * {@link GetPengaduanOperatorUseCase}) melalui konstruktornya, sesuai dengan
+ * prinsip Dependency Injection.
+ */
 public class OperatorListViewModelFactory implements ViewModelProvider.Factory {
     private final GetPengaduanOperatorUseCase getPengaduanOperatorUseCase;
 
+    /**
+     * Konstruktor untuk OperatorListViewModelFactory.
+     *
+     * @param useCase Instance dari use case yang akan disuntikkan
+     * ke dalam OperatorListViewModel saat dibuat.
+     */
     public OperatorListViewModelFactory(GetPengaduanOperatorUseCase useCase) {
         this.getPengaduanOperatorUseCase = useCase;
     }
 
+    /**
+     * Metode yang dipanggil oleh sistem Android untuk membuat instance ViewModel.
+     *
+     * @param modelClass Kelas dari ViewModel yang diminta untuk dibuat.
+     * @return Instance baru dari ViewModel yang diminta.
+     * @throws IllegalArgumentException jika modelClass yang diminta bukan {@link OperatorListViewModel}.
+     */
     @NonNull
     @Override
     public <T extends ViewModel> T create(@NonNull Class<T> modelClass) {
+        // Memeriksa apakah kelas yang diminta adalah OperatorListViewModel atau turunannya.
         if (modelClass.isAssignableFrom(OperatorListViewModel.class)) {
+            // Jika ya, buat instance baru dari OperatorListViewModel dengan use case yang sudah ada.
             return (T) new OperatorListViewModel(getPengaduanOperatorUseCase);
         }
+        // Jika tidak, lemparkan error karena factory ini tidak tahu cara membuat ViewModel lain.
         throw new IllegalArgumentException("Unknown ViewModel class");
     }
 }

@@ -29,12 +29,20 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
+/**
+ * Activity yang menangani fungsionalitas ubah password untuk pengguna.
+ * Bertanggung jawab untuk menampilkan form, memvalidasi input password,
+ * mengirimkan data ke server, dan memberikan umpan balik kepada pengguna.
+ */
 public class UbahPasswordActivity extends AppCompatActivity {
 
+    // --- Deklarasi View ---
     private TextInputLayout inputLayoutPasswordLama, inputLayoutPasswordBaru, inputLayoutKonfirmasiPassword;
     private TextInputEditText editTextPasswordLama, editTextPasswordBaru, editTextKonfirmasiPassword;
     private Button buttonSimpanPassword;
     private ProgressBar progressBar;
+
+    // --- Deklarasi Komponen Lain ---
     private RequestQueue requestQueue;
     private SharedPreferences sharedPreferences;
 
@@ -52,6 +60,9 @@ public class UbahPasswordActivity extends AppCompatActivity {
         buttonSimpanPassword.setOnClickListener(v -> validasiDanSimpan());
     }
 
+    /**
+     * Menginisialisasi semua referensi ke komponen view dari layout XML.
+     */
     private void inisialisasiView() {
         inputLayoutPasswordLama = findViewById(R.id.inputLayoutPasswordLama);
         editTextPasswordLama = findViewById(R.id.editTextPasswordLama);
@@ -63,17 +74,30 @@ public class UbahPasswordActivity extends AppCompatActivity {
         progressBar = findViewById(R.id.progressBarUbahPassword);
     }
 
+    /**
+     * Mengatur Toolbar, termasuk tombol kembali (up button).
+     */
     private void setupToolbar() {
         Toolbar toolbar = findViewById(R.id.toolbarUbahPassword);
         setSupportActionBar(toolbar);
         if (getSupportActionBar() != null) {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
             getSupportActionBar().setDisplayShowHomeEnabled(true);
-
+            // Mengubah warna ikon navigasi (tombol kembali) menjadi hitam
             Objects.requireNonNull(toolbar.getNavigationIcon()).setTint(getResources().getColor(android.R.color.black));
         }
     }
 
+    /**
+     * Memvalidasi semua input dari form ubah password.
+     * Aturan validasi meliputi: tidak boleh kosong, panjang minimal,
+     * password baru harus cocok dengan konfirmasi, dan tidak boleh sama dengan password lama.
+     *
+     * @param passwordLama      Password lama yang dimasukkan pengguna.
+     * @param passwordBaru      Password baru yang dimasukkan pengguna.
+     * @param konfirmasiPassword Konfirmasi password baru.
+     * @return true jika semua input valid, false jika ada yang tidak valid.
+     */
     private boolean validasiInput(String passwordLama, String passwordBaru, String konfirmasiPassword) {
         // Reset error sebelumnya
         inputLayoutPasswordLama.setError(null);
@@ -107,6 +131,10 @@ public class UbahPasswordActivity extends AppCompatActivity {
         return true;
     }
 
+    /**
+     * Mengambil nilai dari EditText, memanggil metode validasi, dan jika valid,
+     * melanjutkan ke proses pengiriman data ke server.
+     */
     private void validasiDanSimpan() {
         String passwordLama = Objects.requireNonNull(editTextPasswordLama.getText()).toString().trim();
         String passwordBaru = Objects.requireNonNull(editTextPasswordBaru.getText()).toString().trim();
@@ -117,6 +145,12 @@ public class UbahPasswordActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Mengirim data perubahan password ke server menggunakan Volley.
+     *
+     * @param passwordLama Password lama untuk verifikasi di server.
+     * @param passwordBaru Password baru yang akan disimpan.
+     */
     private void kirimKeServer(final String passwordLama, final String passwordBaru) {
         setLoading(true);
         int idUser = sharedPreferences.getInt(LoginActivity.KEY_ID_USER, -1);
@@ -157,6 +191,10 @@ public class UbahPasswordActivity extends AppCompatActivity {
         requestQueue.add(stringRequest);
     }
 
+    /**
+     * Mengatur state UI saat proses loading sedang berlangsung atau selesai.
+     * @param isLoading true untuk menampilkan ProgressBar dan menonaktifkan tombol, false sebaliknya.
+     */
     private void setLoading(boolean isLoading) {
         if (isLoading) {
             progressBar.setVisibility(View.VISIBLE);
@@ -167,10 +205,13 @@ public class UbahPasswordActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Menangani event klik pada item di toolbar, khususnya tombol kembali.
+     */
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         if (item.getItemId() == android.R.id.home) {
-            onBackPressed();
+            onBackPressed(); // Fungsi default untuk kembali ke activity sebelumnya
             return true;
         }
         return super.onOptionsItemSelected(item);

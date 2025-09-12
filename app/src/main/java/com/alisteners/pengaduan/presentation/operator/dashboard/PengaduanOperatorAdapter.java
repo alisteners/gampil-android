@@ -26,24 +26,49 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
+/**
+ * Adapter untuk {@link RecyclerView} yang menampilkan daftar pengaduan untuk operator.
+ * Kelas ini bertanggung jawab untuk mengambil data dari list {@link PengaduanPublikItem}
+ * dan menampilkannya ke dalam layout item_pengaduan_publik.xml.
+ * Strukturnya mirip dengan PengaduanPublikAdapter namun digunakan dalam konteks operator.
+ */
 public class PengaduanOperatorAdapter extends RecyclerView.Adapter<PengaduanOperatorAdapter.PengaduanPublikViewHolder> {
     private final List<PengaduanPublikItem> pengaduanItems;
     private final Context context;
     private OnItemClickListener listener;
 
+    /**
+     * Interface untuk menangani event klik pada item di RecyclerView.
+     */
     public interface OnItemClickListener {
+        /**
+         * Dipanggil ketika sebuah item di-klik.
+         * @param item Objek {@link PengaduanPublikItem} yang di-klik.
+         */
         void onItemClick(PengaduanPublikItem item);
     }
 
+    /**
+     * Konstruktor untuk adapter.
+     * @param pengaduanItems List awal dari data pengaduan.
+     * @param context Context dari Fragment atau Activity.
+     */
     public PengaduanOperatorAdapter(List<PengaduanPublikItem> pengaduanItems, Context context) {
         this.pengaduanItems = pengaduanItems;
         this.context = context;
     }
 
+    /**
+     * Mendaftarkan listener untuk event klik item.
+     * @param listener Implementasi dari {@link OnItemClickListener}.
+     */
     public void setOnItemClickListener(OnItemClickListener listener) {
         this.listener = listener;
     }
 
+    /**
+     * Dipanggil oleh RecyclerView untuk membuat ViewHolder baru.
+     */
     @NonNull
     @Override
     public PengaduanPublikViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
@@ -51,17 +76,28 @@ public class PengaduanOperatorAdapter extends RecyclerView.Adapter<PengaduanOper
         return new PengaduanPublikViewHolder(view);
     }
 
+    /**
+     * Dipanggil oleh RecyclerView untuk menampilkan data pada posisi tertentu.
+     */
     @Override
     public void onBindViewHolder(@NonNull PengaduanPublikViewHolder holder, int position) {
         PengaduanPublikItem item = pengaduanItems.get(position);
         holder.bind(item, listener);
     }
 
+    /**
+     * Mengembalikan jumlah total item dalam dataset.
+     */
     @Override
     public int getItemCount() {
         return pengaduanItems != null ? pengaduanItems.size() : 0;
     }
 
+    /**
+     * Memperbarui dataset adapter dengan daftar item yang baru dan memberitahu
+     * RecyclerView untuk me-render ulang tampilannya.
+     * @param newItems List baru dari {@link PengaduanPublikItem}.
+     */
     @SuppressLint("NotifyDataSetChanged")
     public void updateData(List<PengaduanPublikItem> newItems) {
         pengaduanItems.clear();
@@ -71,6 +107,9 @@ public class PengaduanOperatorAdapter extends RecyclerView.Adapter<PengaduanOper
         notifyDataSetChanged();
     }
 
+    /**
+     * ViewHolder yang merepresentasikan satu item dalam RecyclerView.
+     */
     class PengaduanPublikViewHolder extends RecyclerView.ViewHolder {
         ImageView imageViewThumbnail;
         TextView textViewKategori, textViewTanggal, textViewNamaPelapor, textViewDeskripsi;
@@ -86,30 +125,30 @@ public class PengaduanOperatorAdapter extends RecyclerView.Adapter<PengaduanOper
             chipStatus = itemView.findViewById(R.id.chipPublikStatus);
         }
 
+        /**
+         * Mengikat data dari objek item ke komponen UI di dalam ViewHolder.
+         * @param item Objek {@link PengaduanPublikItem} yang berisi data.
+         * @param listener Listener untuk menangani klik pada item.
+         */
         void bind(final PengaduanPublikItem item, final OnItemClickListener listener) {
             textViewKategori.setText(item.getKategori());
             textViewTanggal.setText(formatTanggal(item.getTanggalPengaduan()));
             textViewNamaPelapor.setText(item.getNamaPelapor());
             textViewDeskripsi.setText(item.getDeskripsiSingkat());
 
-            // Panggil metode untuk setup Chip
             setupChipStatus(item.getStatus());
 
-            // Muat gambar thumbnail dengan Glide
             if (item.getPathImage() != null && !item.getPathImage().isEmpty()) {
                 String imageUrl = ApiConfig.BASE_URL + item.getPathImage();
-
                 Glide.with(context)
                         .load(imageUrl)
                         .placeholder(R.drawable.ic_image_placeholder)
                         .error(R.drawable.ic_image_error)
                         .into(imageViewThumbnail);
             } else {
-                // Set gambar default jika tidak ada path gambar
                 imageViewThumbnail.setImageResource(R.drawable.ic_image_placeholder);
             }
 
-            // Set listener untuk seluruh item view
             itemView.setOnClickListener(v -> {
                 if (listener != null) {
                     int position = getAdapterPosition();
@@ -120,6 +159,11 @@ public class PengaduanOperatorAdapter extends RecyclerView.Adapter<PengaduanOper
             });
         }
 
+        /**
+         * Memformat string tanggal dari format "yyyy-MM-dd HH:mm:ss" menjadi "dd MMMM yyyy".
+         * @param tanggalMySQL String tanggal dari server.
+         * @return String tanggal yang sudah diformat.
+         */
         private String formatTanggal(String tanggalMySQL) {
             if (tanggalMySQL == null) return "";
             SimpleDateFormat inputFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
@@ -132,13 +176,16 @@ public class PengaduanOperatorAdapter extends RecyclerView.Adapter<PengaduanOper
             }
         }
 
+        /**
+         * Mengatur tampilan Chip (teks, warna, ikon) berdasarkan status pengaduan.
+         * @param status String status dari item pengaduan.
+         */
         private void setupChipStatus(String status) {
             if (status == null) {
                 chipStatus.setVisibility(View.GONE);
                 return;
             }
             chipStatus.setVisibility(View.VISIBLE);
-
             chipStatus.setText(StringUtils.capitalizeFirstLetter(status));
 
             int backgroundColorRes;

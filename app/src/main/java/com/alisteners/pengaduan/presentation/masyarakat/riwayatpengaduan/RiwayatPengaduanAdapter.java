@@ -21,26 +21,49 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
+/**
+ * Adapter untuk {@link RecyclerView} yang menampilkan daftar riwayat pengaduan pengguna.
+ * Kelas ini bertanggung jawab untuk mengambil data dari list {@link PengaduanRiwayatItem}
+ * dan menampilkannya ke dalam layout item_riwayat_pengaduan.xml.
+ */
 public class RiwayatPengaduanAdapter extends RecyclerView.Adapter<RiwayatPengaduanAdapter.RiwayatViewHolder> {
 
     private final List<PengaduanRiwayatItem> riwayatItems;
     private final Context context;
     private OnItemClickListener listener;
 
-    // Interface untuk menangani klik pada item RecyclerView
+    /**
+     * Interface untuk menangani event klik pada item di RecyclerView.
+     */
     public interface OnItemClickListener {
+        /**
+         * Dipanggil ketika sebuah item riwayat di-klik.
+         * @param item Objek {@link PengaduanRiwayatItem} yang di-klik.
+         */
         void onItemClick(PengaduanRiwayatItem item);
     }
 
+    /**
+     * Konstruktor untuk adapter.
+     * @param riwayatItems List awal dari data riwayat.
+     * @param context Context dari Fragment atau Activity.
+     */
     public RiwayatPengaduanAdapter(List<PengaduanRiwayatItem> riwayatItems, Context context) {
         this.riwayatItems = riwayatItems;
         this.context = context;
     }
 
+    /**
+     * Mendaftarkan listener untuk event klik item.
+     * @param listener Implementasi dari {@link OnItemClickListener}.
+     */
     public void setOnItemClickListener(OnItemClickListener listener) {
         this.listener = listener;
     }
 
+    /**
+     * Dipanggil oleh RecyclerView untuk membuat ViewHolder baru.
+     */
     @NonNull
     @Override
     public RiwayatViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
@@ -48,27 +71,40 @@ public class RiwayatPengaduanAdapter extends RecyclerView.Adapter<RiwayatPengadu
         return new RiwayatViewHolder(view);
     }
 
+    /**
+     * Dipanggil oleh RecyclerView untuk menampilkan data pada posisi tertentu.
+     */
     @Override
     public void onBindViewHolder(@NonNull RiwayatViewHolder holder, int position) {
         PengaduanRiwayatItem item = riwayatItems.get(position);
         holder.bind(item, listener);
     }
 
+    /**
+     * Mengembalikan jumlah total item dalam dataset.
+     */
     @Override
     public int getItemCount() {
         return riwayatItems != null ? riwayatItems.size() : 0;
     }
 
-    // Metode untuk memperbarui data di adapter setelah data baru diambil dari server
+    /**
+     * Memperbarui dataset adapter dengan daftar item yang baru dan memberitahu
+     * RecyclerView untuk me-render ulang tampilannya.
+     * @param newItems List baru dari {@link PengaduanRiwayatItem}.
+     */
     @SuppressLint("NotifyDataSetChanged")
     public void updateData(List<PengaduanRiwayatItem> newItems) {
         this.riwayatItems.clear();
         if (newItems != null) {
             this.riwayatItems.addAll(newItems);
         }
-        notifyDataSetChanged(); // Memberi tahu RecyclerView untuk me-refresh tampilannya
+        notifyDataSetChanged();
     }
 
+    /**
+     * ViewHolder yang merepresentasikan satu item riwayat dalam RecyclerView.
+     */
     class RiwayatViewHolder extends RecyclerView.ViewHolder {
         TextView textViewTanggal, textViewStatus, textViewKategori, textViewLokasi;
 
@@ -80,38 +116,38 @@ public class RiwayatPengaduanAdapter extends RecyclerView.Adapter<RiwayatPengadu
             textViewLokasi = itemView.findViewById(R.id.textViewRiwayatLokasi);
         }
 
+        /**
+         * Mengikat data dari objek item ke komponen UI di dalam ViewHolder.
+         * @param item Objek {@link PengaduanRiwayatItem} yang berisi data.
+         * @param listener Listener untuk menangani klik pada item.
+         */
         void bind(final PengaduanRiwayatItem item, final OnItemClickListener listener) {
-            // Format tanggal dari "YYYY-MM-DD HH:MM:SS" (default MySQL) ke format yang lebih ramah
-            SimpleDateFormat inputFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
-            SimpleDateFormat outputFormat = new SimpleDateFormat("dd MMMM yyyy, HH:mm", new Locale("id", "ID"));
-
-            try {
-                Date date = inputFormat.parse(item.tanggalPengaduan());
-                if (date != null) {
-                    textViewTanggal.setText(outputFormat.format(date));
-                }
-            } catch (ParseException e) {
-                textViewTanggal.setText(item.tanggalPengaduan()); // Tampilkan apa adanya jika parsing gagal
-                e.printStackTrace();
-            }
-
+            textViewTanggal.setText(formatTanggal(item.tanggalPengaduan()));
             textViewKategori.setText(item.kategori());
             textViewLokasi.setText(item.lokasiSingkat());
 
-            String statusDariDb = item.status();
-            if (statusDariDb != null) {
-                // Panggil helper untuk memformat teks
-                textViewStatus.setText(StringUtils.capitalizeFirstLetter(statusDariDb));
+            setupStatus(item.status());
 
-                // 1. Ambil status dan ubah ke huruf kecil untuk perbandingan yang aman
-                String statusLowerCase = statusDariDb.toLowerCase();
+            // Set listener untuk seluruh item view
+            itemView.setOnClickListener(v -> {
+                if (listener != null) {
+                    int position = getAdapterPosition();
+                    if (position != RecyclerView.NO_POSITION) { // Memastikan posisi valid
+                        listener.onItemClick(riwayatItems.get(position));
+                    }
+                }
+            });
+        }
 
-                // 2. Buat string untuk ditampilkan dengan huruf awal kapital
-                String statusTampil = statusLowerCase.substring(0, 1).toUpperCase() + statusLowerCase.substring(1);
-                textViewStatus.setText(statusTampil);
+        /**
+         * Mengatur teks dan warna pada TextView status berdasarkan status pengaduan.
+         * @param status String status dari item pengaduan.
+         */
+        private void setupStatus(String status) {
+            if (status != null) {
+                textViewStatus.setText(StringUtils.capitalizeFirstLetter(status));
 
-                // 3. Atur warna berdasarkan perbandingan huruf kecil yang konsisten
-                int colorRes = switch (statusDariDb.toLowerCase()) {
+                int colorRes = switch (status.toLowerCase()) {
                     case "menunggu" -> R.color.status_menunggu;
                     case "diproses" -> R.color.status_diproses;
                     case "selesai" -> R.color.status_selesai;
@@ -121,16 +157,26 @@ public class RiwayatPengaduanAdapter extends RecyclerView.Adapter<RiwayatPengadu
             } else {
                 textViewStatus.setText("N/A");
             }
+        }
 
-            // Set listener untuk seluruh item view
-            itemView.setOnClickListener(v -> {
-                if (listener != null) {
-                    int position = getAdapterPosition();
-                    if (position != RecyclerView.NO_POSITION) { // Pastikan posisi valid
-                        listener.onItemClick(riwayatItems.get(position));
-                    }
-                }
-            });
+        /**
+         * Memformat string tanggal dari format "yyyy-MM-dd HH:mm:ss" menjadi "dd MMMM yyyy, HH:mm".
+         * @param tanggalMySQL String tanggal dari server.
+         * @return String tanggal yang sudah diformat.
+         */
+        private String formatTanggal(String tanggalMySQL) {
+            if (tanggalMySQL == null) return "";
+            SimpleDateFormat inputFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
+            SimpleDateFormat outputFormat = new SimpleDateFormat("dd MMMM yyyy, HH:mm", new Locale("id", "ID"));
+
+            try {
+                Date date = inputFormat.parse(tanggalMySQL);
+                return (date != null) ? outputFormat.format(date) : tanggalMySQL;
+            } catch (ParseException e) {
+                // Jika parsing gagal, kembalikan tanggal asli untuk debugging
+                e.printStackTrace();
+                return tanggalMySQL;
+            }
         }
     }
 }

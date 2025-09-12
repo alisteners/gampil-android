@@ -8,7 +8,6 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -33,15 +32,21 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+/**
+ * Fragment yang bertanggung jawab untuk menampilkan halaman profil untuk pengguna operator.
+ * Halaman ini menampilkan data diri operator, statistik kinerjanya, serta menyediakan
+ * menu untuk mengubah password, melihat info aplikasi, dan logout.
+ */
 public class ProfilOperatorFragment extends Fragment {
     private static final String TAG = "ProfilOperatorFragment";
 
+    // --- Deklarasi View ---
     private TextView textViewNama;
     private TextView textViewEmail;
     private TextView textViewTelepon;
-
-    // Variabel untuk Statistik Operator
     private TextView textViewStatDitangani, textViewStatDiproses, textViewStatSelesai;
+
+    // --- Deklarasi Komponen Lain ---
     private RequestQueue requestQueue;
     private SharedPreferences sharedPreferences;
 
@@ -55,39 +60,44 @@ public class ProfilOperatorFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        // Inisialisasi komponen UI
+        inisialisasiView(view);
+        setupListeners(view);
+
+        tampilkanDataProfil();
+        loadStatistikOperator();
+    }
+
+    /**
+     * Menginisialisasi semua referensi ke komponen view dan dependensi lainnya.
+     */
+    private void inisialisasiView(@NonNull View view) {
         textViewNama = view.findViewById(R.id.textViewProfilNamaOperator);
         textViewEmail = view.findViewById(R.id.textViewProfilEmailOperator);
         textViewTelepon = view.findViewById(R.id.textViewProfilTeleponOperator);
-        Button buttonLogout = view.findViewById(R.id.buttonLogoutOperator);
-        TextView menuUbahPasswordOperator = view.findViewById(R.id.menuUbahPasswordOperator);
-        TextView menuTentangAplikasiOperator = view.findViewById(R.id.menuTentangAplikasiOperator);
-        Toolbar toolbar = view.findViewById(R.id.toolbarProfilOperator);
-        ((AppCompatActivity) requireActivity()).setSupportActionBar(toolbar);
-
-        // Inisialisasi komponen statistik
         textViewStatDitangani = view.findViewById(R.id.textViewStatMenungguOperator);
         textViewStatDiproses = view.findViewById(R.id.textViewStatDiprosesOperator);
         textViewStatSelesai = view.findViewById(R.id.textViewStatSelesaiOperator);
 
-        // Inisialisasi Volley dan SharedPreferences
         requestQueue = Volley.newRequestQueue(requireContext());
         sharedPreferences = requireActivity().getSharedPreferences(LoginActivity.SHARED_PREFS, Context.MODE_PRIVATE);
 
-        // Tampilkan data profil dari SharedPreferences
-        tampilkanDataProfil();
-
-        // Muat data statistik dari server
-        loadStatistikOperator();
-
-        // Setup listener untuk tombol logout
-        buttonLogout.setOnClickListener(v -> tampilkanDialogLogout());
-        // Setup listener untuk ubah password
-        menuUbahPasswordOperator.setOnClickListener(v -> startActivity(new Intent(requireContext(), UbahPasswordActivity.class)));
-        // Setup listener untuk tentang aplikasi
-        menuTentangAplikasiOperator.setOnClickListener(v -> tampilkanDialogTentang());
+        Toolbar toolbar = view.findViewById(R.id.toolbarProfilOperator);
+        ((AppCompatActivity) requireActivity()).setSupportActionBar(toolbar);
     }
 
+    /**
+     * Mengatur semua listener untuk interaksi pengguna pada fragment ini.
+     */
+    private void setupListeners(@NonNull View view) {
+        view.findViewById(R.id.buttonLogoutOperator).setOnClickListener(v -> tampilkanDialogLogout());
+        view.findViewById(R.id.menuUbahPasswordOperator).setOnClickListener(v -> startActivity(new Intent(requireContext(), UbahPasswordActivity.class)));
+        view.findViewById(R.id.menuTentangAplikasiOperator).setOnClickListener(v -> tampilkanDialogTentang());
+    }
+
+    /**
+     * Menampilkan data profil operator (nama, email, telepon) yang disimpan
+     * di SharedPreferences ke komponen TextView yang sesuai.
+     */
     private void tampilkanDataProfil() {
         String namaLengkap = sharedPreferences.getString(LoginActivity.KEY_NAMA_LENGKAP, "Nama Operator");
         String email = sharedPreferences.getString(LoginActivity.KEY_EMAIL, "operator@desabandorasa.id");
@@ -98,6 +108,10 @@ public class ProfilOperatorFragment extends Fragment {
         textViewTelepon.setText(noTelepon);
     }
 
+    /**
+     * Mengambil dan menampilkan data statistik kinerja (ditangani, diproses, selesai)
+     * untuk operator yang sedang login dari server.
+     */
     private void loadStatistikOperator() {
         int idOperator = sharedPreferences.getInt(LoginActivity.KEY_ID_USER, -1);
         if (idOperator == -1) {
@@ -105,6 +119,7 @@ public class ProfilOperatorFragment extends Fragment {
             return;
         }
 
+        // Tampilkan placeholder "..." saat data sedang dimuat
         textViewStatDitangani.setText("...");
         textViewStatDiproses.setText("...");
         textViewStatSelesai.setText("...");
@@ -116,14 +131,9 @@ public class ProfilOperatorFragment extends Fragment {
                     try {
                         if ("success".equals(response.getString("status"))) {
                             JSONObject data = response.getJSONObject("data");
-                            int jumlahDitangani = data.getInt("jumlah_ditangani");
-                            int jumlahDiproses = data.getInt("jumlah_diproses");
-                            int jumlahSelesai = data.getInt("jumlah_selesai");
-
-                            textViewStatDitangani.setText(String.valueOf(jumlahDitangani));
-                            textViewStatDiproses.setText(String.valueOf(jumlahDiproses));
-                            textViewStatSelesai.setText(String.valueOf(jumlahSelesai));
-
+                            textViewStatDitangani.setText(String.valueOf(data.getInt("jumlah_ditangani")));
+                            textViewStatDiproses.setText(String.valueOf(data.getInt("jumlah_diproses")));
+                            textViewStatSelesai.setText(String.valueOf(data.getInt("jumlah_selesai")));
                         } else {
                             Toast.makeText(getContext(), "Gagal memuat statistik: " + response.getString("message"), Toast.LENGTH_SHORT).show();
                         }
@@ -139,32 +149,33 @@ public class ProfilOperatorFragment extends Fragment {
         requestQueue.add(jsonObjectRequest);
     }
 
+    /**
+     * Menampilkan dialog "Tentang Aplikasi".
+     */
     private void tampilkanDialogTentang() {
-        // Ambil informasi versi aplikasi dari Gradle secara dinamis
         String versiAplikasi = "Versi ";
         try {
             versiAplikasi += requireActivity().getPackageManager()
                     .getPackageInfo(requireActivity().getPackageName(), 0).versionName;
         } catch (Exception e) {
-            versiAplikasi += "1.0"; // Fallback jika gagal
+            versiAplikasi += "1.0"; // Fallback
         }
 
-        // Bangun isi pesan dialog
         String pesan = "GAMPIL (Gampang Lapor Infrastruktur) merupakan aplikasi pengaduan kerusakan infrastruktur desa berbasis Android " +
                 "dengan menerapkan algoritma Run Length Encoding (RLE) Untuk Kompresi Gambar.\n\n" +
                 "Developed by Ridho NF\n\n" +
                 versiAplikasi;
 
-        // Tampilkan dialog menggunakan MaterialAlertDialogBuilder
         new MaterialAlertDialogBuilder(requireContext())
                 .setTitle("Tentang Aplikasi")
                 .setMessage(pesan)
-                .setPositiveButton("OK", (dialog, which) -> {
-                    dialog.dismiss(); // Tutup dialog saat tombol OK diklik
-                })
+                .setPositiveButton("OK", (dialog, which) -> dialog.dismiss())
                 .show();
     }
 
+    /**
+     * Menampilkan dialog konfirmasi sebelum melakukan proses logout.
+     */
     private void tampilkanDialogLogout() {
         new MaterialAlertDialogBuilder(requireContext())
                 .setTitle("Konfirmasi Logout")

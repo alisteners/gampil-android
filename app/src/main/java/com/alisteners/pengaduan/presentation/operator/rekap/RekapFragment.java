@@ -49,8 +49,14 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
+/**
+ * Fragment yang bertanggung jawab untuk menampilkan halaman rekapitulasi dan statistik
+ * untuk pengguna operator. Menampilkan data dalam bentuk ringkasan, diagram lingkaran (Pie Chart)
+ * untuk distribusi kategori, dan diagram batang (Bar Chart) untuk tren bulanan.
+ */
 public class RekapFragment extends Fragment {
 
+    // --- Deklarasi View & Komponen ---
     private RekapViewModel viewModel;
     private TextView tvTotal, tvMenunggu, tvDiproses, tvSelesai;
     private PieChart pieChart;
@@ -73,9 +79,14 @@ public class RekapFragment extends Fragment {
         inisialisasiView(view);
         setupViewModel();
         observeViewModel();
+
+        // Memuat data rekap saat fragment pertama kali dibuat
         viewModel.loadRekapData();
     }
 
+    /**
+     * Menginisialisasi semua referensi ke komponen view dari layout XML.
+     */
     private void inisialisasiView(View view) {
         tvTotal = view.findViewById(R.id.tvTotalLaporan);
         tvMenunggu = view.findViewById(R.id.tvStatusMenunggu);
@@ -86,6 +97,9 @@ public class RekapFragment extends Fragment {
         progressBar = view.findViewById(R.id.progressBarRekap);
     }
 
+    /**
+     * Menginisialisasi ViewModel menggunakan ViewModelFactory untuk menyuntikkan dependensi.
+     */
     private void setupViewModel() {
         OperatorRepository repository = new OperatorRepositoryImpl(requireContext());
         GetRekapDataUseCase useCase = new GetRekapDataUseCase(repository);
@@ -93,8 +107,12 @@ public class RekapFragment extends Fragment {
         viewModel = new ViewModelProvider(this, factory).get(RekapViewModel.class);
     }
 
+    /**
+     * Mengamati LiveData dari ViewModel untuk memperbarui UI secara reaktif.
+     */
     private void observeViewModel() {
-        viewModel.isLoading.observe(getViewLifecycleOwner(), isLoading -> progressBar.setVisibility(isLoading ? View.VISIBLE : View.GONE));
+        viewModel.isLoading.observe(getViewLifecycleOwner(), isLoading ->
+                progressBar.setVisibility(isLoading ? View.VISIBLE : View.GONE));
 
         viewModel.errorMessage.observe(getViewLifecycleOwner(), error -> {
             if (error != null && !error.isEmpty()) {
@@ -104,18 +122,17 @@ public class RekapFragment extends Fragment {
 
         viewModel.rekapData.observe(getViewLifecycleOwner(), rekapData -> {
             if (rekapData != null) {
-                // Mengisi data summary (sekarang akan bekerja)
                 populateSummary(rekapData.summary);
-
-                // Mengisi data pie chart (sekarang akan bekerja)
                 setupPieChart(rekapData.distribusiKategori);
-
-                // Mengisi data bar chart (sekarang akan bekerja)
                 setupBarChart(rekapData.trenBulanan);
             }
         });
     }
 
+    /**
+     * Mengisi data ringkasan (summary) ke dalam TextViews.
+     * @param summary Objek {@link Summary} yang berisi data jumlah laporan.
+     */
     private void populateSummary(Summary summary) {
         if(summary == null) return;
         tvTotal.setText(String.valueOf(summary.total));
@@ -124,6 +141,10 @@ public class RekapFragment extends Fragment {
         tvSelesai.setText(String.valueOf(summary.selesai));
     }
 
+    /**
+     * Mengatur dan menampilkan data distribusi kategori ke dalam PieChart.
+     * @param data Daftar {@link KategoriDistribusi} dari ViewModel.
+     */
     private void setupPieChart(List<KategoriDistribusi> data) {
         if (data == null || data.isEmpty()) {
             pieChart.setVisibility(View.GONE);
@@ -131,68 +152,50 @@ public class RekapFragment extends Fragment {
         }
         pieChart.setVisibility(View.VISIBLE);
 
-        // Pengaturan Dasar Chart
         pieChart.setUsePercentValues(true);
         pieChart.getDescription().setEnabled(false);
         pieChart.setExtraOffsets(5, 10, 5, 5);
-        pieChart.setDragDecelerationFrictionCoef(0.95f);
-
-        // Pengaturan Lubang Tengah
         pieChart.setDrawHoleEnabled(true);
         pieChart.setHoleColor(Color.WHITE);
-        pieChart.setTransparentCircleRadius(61f);
-        pieChart.setCenterText("Distribusi Kategori"); // Teks default
+        pieChart.setCenterText("Distribusi Kategori");
         pieChart.setCenterTextSize(14f);
-
-        // Sembunyikan label nama kategori dari atas slice
         pieChart.setDrawEntryLabels(false);
 
-        // Mempersiapkan Data dan Warna
         ArrayList<PieEntry> entries = new ArrayList<>();
         for (KategoriDistribusi item : data) {
             entries.add(new PieEntry(item.jumlah, item.kategori));
         }
 
-        PieData pieData = getPieData(entries);
-        pieChart.setData(pieData);
+        pieChart.setData(getPieData(entries));
 
-        // Pengaturan Legenda di Bawah (Tidak Berubah)
         Legend l = pieChart.getLegend();
         l.setVerticalAlignment(Legend.LegendVerticalAlignment.BOTTOM);
         l.setHorizontalAlignment(Legend.LegendHorizontalAlignment.CENTER);
         l.setOrientation(Legend.LegendOrientation.HORIZONTAL);
-        l.setDrawInside(false);
         l.setWordWrapEnabled(true);
-        l.setXEntrySpace(10f);
-        l.setYEntrySpace(5f);
 
-
-        // LISTENER KLIK INTERAKTIF
+        // Listener untuk interaksi klik pada chart
         pieChart.setOnChartValueSelectedListener(new OnChartValueSelectedListener() {
             @Override
             public void onValueSelected(Entry e, Highlight h) {
-                if (e == null) return;
-
-                PieEntry pieEntry = (PieEntry) e;
-                // Tampilkan label dan persen di tengah chart saat diklik
-                // Menggunakan getX() untuk nilai mentah dan getY() untuk persen jika chart dikonfigurasi
-                // Tapi untuk amannya, kita hitung manual persennya dari nilai mentah
-                String centerText = pieEntry.getLabel() + "\n" + String.format(Locale.US, "%.1f%%", h.getY());
-                pieChart.setCenterText(centerText);
+                if (e instanceof PieEntry pieEntry) {
+                    String centerText = pieEntry.getLabel() + "\n" + String.format(Locale.US, "%.1f%%", h.getY());
+                    pieChart.setCenterText(centerText);
+                }
             }
-
             @Override
             public void onNothingSelected() {
-                // Kembalikan ke teks default jika tidak ada yang dipilih
                 pieChart.setCenterText("Distribusi Kategori");
             }
         });
 
-        // Animasi dan Refresh
         pieChart.animateY(1400, Easing.EaseInOutQuad);
         pieChart.invalidate();
     }
 
+    /**
+     * Membuat objek PieData dengan dataset dan konfigurasi warna.
+     */
     @NonNull
     private static PieData getPieData(ArrayList<PieEntry> entries) {
         ArrayList<Integer> colors = new ArrayList<>();
@@ -200,17 +203,17 @@ public class RekapFragment extends Fragment {
         for (int color : ColorTemplate.VORDIPLOM_COLORS) { colors.add(color); }
         for (int color : ColorTemplate.JOYFUL_COLORS) { colors.add(color); }
 
-        // Pengaturan Tampilan Data (PieDataSet)
         PieDataSet dataSet = new PieDataSet(entries, "");
         dataSet.setColors(colors);
         dataSet.setSliceSpace(3f);
-
-        // Jangan gambar nilai (persentase dan garis) di chart sama sekali
-        dataSet.setDrawValues(false);
-
+        dataSet.setDrawValues(false); // Sembunyikan nilai persen di atas slice
         return new PieData(dataSet);
     }
 
+    /**
+     * Mengatur dan menampilkan data tren bulanan ke dalam BarChart.
+     * @param data Daftar {@link TrenBulanan} dari ViewModel.
+     */
     private void setupBarChart(List<TrenBulanan> data) {
         if (data == null || data.isEmpty()) {
             barChart.setVisibility(View.GONE);
@@ -222,39 +225,37 @@ public class RekapFragment extends Fragment {
         ArrayList<String> labels = new ArrayList<>();
         for (int i = 0; i < data.size(); i++) {
             entries.add(new BarEntry(i, data.get(i).jumlah));
-            // Format bulan dari "2025-06" menjadi "Jun 25"
             labels.add(formatLabelBulan(data.get(i).bulan));
         }
 
         BarDataSet dataSet = new BarDataSet(entries, "Jumlah Laporan");
         dataSet.setColor(ContextCompat.getColor(requireContext(), R.color.app_primer));
-
         BarData barData = new BarData(dataSet);
         barData.setBarWidth(0.5f);
-        barData.setValueTextSize(10f);
 
         XAxis xAxis = barChart.getXAxis();
         xAxis.setValueFormatter(new IndexAxisValueFormatter(labels));
         xAxis.setPosition(XAxis.XAxisPosition.BOTTOM);
         xAxis.setGranularity(1f);
-        xAxis.setGranularityEnabled(true);
-        xAxis.setLabelRotationAngle(-45); // Rotasi label agar tidak tumpang tindih
+        xAxis.setLabelRotationAngle(-45);
 
         barChart.setData(barData);
         barChart.getDescription().setEnabled(false);
-        barChart.getAxisRight().setEnabled(false); // Sembunyikan sumbu Y kanan
+        barChart.getAxisRight().setEnabled(false);
         barChart.setFitBars(true);
         barChart.animateY(1000);
         barChart.invalidate();
     }
 
-    private String formatLabelBulan(String bulanTahun) { // Contoh: "2025-06"
+    /**
+     * Memformat label bulan dari "yyyy-MM" menjadi "MMM yy" (misal: "Jun 25").
+     */
+    private String formatLabelBulan(String bulanTahun) {
         try {
             SimpleDateFormat input = new SimpleDateFormat("yyyy-MM", Locale.getDefault());
             SimpleDateFormat output = new SimpleDateFormat("MMM yy", new Locale("id", "ID"));
             Date date = input.parse(bulanTahun);
-            assert date != null;
-            return output.format(date);
+            return (date != null) ? output.format(date) : bulanTahun;
         } catch (ParseException e) {
             return bulanTahun;
         }

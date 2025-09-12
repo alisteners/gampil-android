@@ -29,14 +29,23 @@ import com.google.android.material.tabs.TabLayoutMediator;
 
 import org.json.JSONException;
 
+/**
+ * Fragment yang berfungsi sebagai container utama untuk dashboard operator.
+ * Mengelola tampilan navigasi bertab (TabLayout) yang dihubungkan dengan ViewPager2
+ * untuk menampilkan daftar pengaduan berdasarkan statusnya ("Baru", "Diproses", "Selesai").
+ * Fragment ini juga mengimplementasikan mekanisme polling untuk memperbarui badge notifikasi
+ * pada tab "Baru" secara periodik.
+ */
 public class DashboardOperatorFragment extends Fragment {
 
     private static final String TAG = "DashboardOperator";
+    private static final long BADGE_POLLING_INTERVAL = 30000; // Cek setiap 30 detik
+
+    // --- Deklarasi View & Komponen ---
     private TabLayout tabLayout;
     private RequestQueue requestQueue;
     private final Handler badgePollingHandler = new Handler(Looper.getMainLooper());
     private Runnable badgePollingRunnable;
-    private static final long BADGE_POLLING_INTERVAL = 30000; // Cek setiap 30 detik
 
     @Nullable
     @Override
@@ -55,10 +64,12 @@ public class DashboardOperatorFragment extends Fragment {
         ViewPager2 viewPager = view.findViewById(R.id.viewPagerOperator);
         requestQueue = Volley.newRequestQueue(requireContext());
 
+        // Mengatur adapter untuk ViewPager2
         OperatorPagerAdapter pagerAdapter = new OperatorPagerAdapter(this);
         viewPager.setAdapter(pagerAdapter);
-        viewPager.setOffscreenPageLimit(3);
+        viewPager.setOffscreenPageLimit(3); // Menjaga 3 fragment tetap di memori untuk transisi yang mulus
 
+        // Menghubungkan TabLayout dengan ViewPager2
         new TabLayoutMediator(tabLayout, viewPager, (tab, position) -> {
             switch (position) {
                 case 0:
@@ -76,6 +87,11 @@ public class DashboardOperatorFragment extends Fragment {
         setupPollingBadge();
     }
 
+    /**
+     * Menginisialisasi mekanisme polling periodik menggunakan Handler.
+     * Runnable ini akan memanggil {@link #fetchNewReportCount()} secara berulang
+     * sesuai dengan interval yang ditentukan.
+     */
     private void setupPollingBadge() {
         badgePollingRunnable = () -> {
             fetchNewReportCount();
@@ -83,18 +99,29 @@ public class DashboardOperatorFragment extends Fragment {
         };
     }
 
+    /**
+     * Memulai polling saat fragment terlihat oleh pengguna.
+     */
     @Override
     public void onResume() {
         super.onResume();
         badgePollingHandler.post(badgePollingRunnable);
     }
 
+    /**
+     * Menghentikan polling saat fragment tidak lagi terlihat oleh pengguna
+     * untuk menghemat baterai dan sumber daya jaringan.
+     */
     @Override
     public void onPause() {
         super.onPause();
         badgePollingHandler.removeCallbacks(badgePollingRunnable);
     }
 
+    /**
+     * Mengirim request ke server untuk mendapatkan jumlah laporan baru (yang berstatus "menunggu").
+     * Hasilnya akan digunakan untuk memperbarui badge pada tab.
+     */
     private void fetchNewReportCount() {
         String url = ApiConfig.BASE_URL + "get_new_report_count.php";
 
@@ -109,25 +136,23 @@ public class DashboardOperatorFragment extends Fragment {
                         Log.e(TAG, "Error parsing JSON: " + e.getMessage());
                     }
                 },
-                error -> {
-                    Log.e(TAG, "Volley error: " + error.toString());
-                }
+                error -> Log.e(TAG, "Volley error saat fetch report count: " + error.toString())
         );
         requestQueue.add(request);
     }
 
+    /**
+     * Memperbarui tampilan badge notifikasi pada tab "Baru".
+     * @param count Jumlah laporan baru. Jika lebih dari 0, badge akan ditampilkan.
+     * Jika 0, badge yang ada akan dihapus.
+     */
     private void updateBadge(int count) {
         TabLayout.Tab tabBaru = tabLayout.getTabAt(0); // Ambil tab "Baru" (posisi 0)
         if (tabBaru != null) {
             if (count > 0) {
                 BadgeDrawable badge = tabBaru.getOrCreateBadge();
                 badge.setNumber(count);
-
-                // Mengatur posisi badge agar tidak menutupi teks
                 badge.setBadgeGravity(BadgeDrawable.TOP_END);
-                badge.setHorizontalOffset(10); // Geser ke kanan (eksperimen dengan nilai ini)
-                badge.setVerticalOffset(10);   // Geser ke bawah (eksperimen dengan nilai ini)
-
             } else {
                 tabBaru.removeBadge();
             }

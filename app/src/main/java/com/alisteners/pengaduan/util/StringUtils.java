@@ -1,13 +1,28 @@
 package com.alisteners.pengaduan.util;
 
+/**
+ * Kelas utilitas (helper) yang berisi metode-metode statis untuk memanipulasi String.
+ * Kelas ini dibuat untuk menampung fungsi-fungsi umum terkait String agar dapat
+ * digunakan kembali di seluruh aplikasi dan menjaga kode tetap bersih (DRY - Don't Repeat Yourself).
+ */
 public class StringUtils {
 
     /**
-     * Mengubah string menjadi format dengan huruf awal kapital.
-     * Contoh: "diproses" -> "Diproses"
-     * Contoh: "SELESAI" -> "Selesai"
-     * @param text Teks yang akan diubah.
-     * @return Teks yang sudah diformat.
+     * Mengubah huruf pertama dari sebuah String menjadi huruf kapital (kapitalisasi judul)
+     * dan sisa hurufnya menjadi huruf kecil.
+     * Metode ini aman untuk input null atau kosong.
+     * <p>
+     * Contoh:
+     * <ul>
+     * <li>"diproses" -> "Diproses"</li>
+     * <li>"SELESAI" -> "Selesai"</li>
+     * <li>"m" -> "M"</li>
+     * <li>"" -> ""</li>
+     * <li>null -> ""</li>
+     * </ul>
+     *
+     * @param text Teks yang akan diubah formatnya.
+     * @return Teks yang sudah diformat dengan huruf awal kapital, atau string kosong jika input tidak valid.
      */
     public static String capitalizeFirstLetter(String text) {
         if (text == null || text.isEmpty()) {

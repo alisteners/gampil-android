@@ -13,29 +13,48 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.List;
 
+/**
+ * Kelas yang bertanggung jawab untuk mengelola seluruh alur kerja pemrosesan dan kompresi gambar.
+ * Kelas ini mengisolasi logika berat dari Activity, sesuai dengan Prinsip Tanggung Jawab Tunggal (SRP),
+ * membuat kode di Activity menjadi lebih bersih dan fokus pada tugas UI.
+ */
 public class ImageProcessingManager {
 
     private static final String TAG = "ImageProcessingManager";
 
     private final Context context;
 
-    // Kelas penampung untuk hasil pemrosesan gambar
-        public record ProcessingResult(File fileDataUntukUpload, File fileThumbnail,
-                                       PengaduanData pengaduanData) {
+    /**
+     * Kelas data (record) untuk menampung hasil dari proses kompresi gambar.
+     * Digunakan untuk mengembalikan beberapa nilai sekaligus dari metode processAndCompressImage.
+     * @param fileDataUntukUpload File utama yang akan diunggah (bisa .rle atau .jpg hasil fallback).
+     * @param fileThumbnail File thumbnail gambar (selalu .jpg).
+     * @param pengaduanData Objek PengaduanData yang sudah terisi lengkap dengan metrik analisis.
+     */
+    public record ProcessingResult(File fileDataUntukUpload, File fileThumbnail,
+                                   PengaduanData pengaduanData) {
     }
 
+    /**
+     * Konstruktor untuk ImageProcessingManager.
+     *
+     * @param context Context aplikasi, digunakan untuk mengakses direktori cache
+     * untuk penyimpanan file sementara.
+     */
     public ImageProcessingManager(Context context) {
         this.context = context.getApplicationContext();
     }
 
     /**
-     * Memproses dan mengompres gambar pengaduan di background thread.
+     * Mengeksekusi seluruh alur kerja pemrosesan dan kompresi gambar.
+     * Proses ini mencakup: konversi grayscale, kuantisasi, kompresi RLE, logika smart-compression
+     * untuk memilih format file terbaik, pembuatan thumbnail, dan kalkulasi semua metrik analisis.
      *
      * @param bitmapUntukDiolah Bitmap yang akan diproses.
-     * @param ukuranFileAsliBytes Ukuran file asli sebelum di-resize.
-     * @param dataAwal Data pengaduan awal dari UI (user, lokasi, dll).
-     * @return Objek ProcessingResult yang berisi file hasil olahan dan data lengkap pengaduan.
-     * @throws IOException Jika terjadi error saat pemrosesan atau penyimpanan file.
+     * @param ukuranFileAsliBytes Ukuran file asli sebelum di-resize (dari ImagePicker), digunakan sebagai basis perbandingan.
+     * @param dataAwal Objek PengaduanData yang berisi informasi awal dari input UI (user, lokasi, deskripsi, dll).
+     * @return Objek ProcessingResult yang berisi file-file yang siap diunggah dan objek PengaduanData yang sudah terisi lengkap dengan metrik analisis.
+     * @throws IOException Jika terjadi error saat pemrosesan atau penyimpanan file ke cache.
      */
     public ProcessingResult processAndCompressImage(Bitmap bitmapUntukDiolah, long ukuranFileAsliBytes, PengaduanData dataAwal) throws IOException {
         long startTime = System.currentTimeMillis();
@@ -112,6 +131,14 @@ public class ImageProcessingManager {
         return new ProcessingResult(fileDataUntukUpload, fileThumbnail, pengaduanDataLengkap);
     }
 
+    /**
+     * Metode helper privat untuk menyimpan objek Bitmap ke file sementara di direktori cache.
+     *
+     * @param bitmap   Bitmap yang akan disimpan.
+     * @param namaFile Nama file tujuan.
+     * @param quality  Kualitas kompresi JPEG (0-100).
+     * @return Objek File jika berhasil, atau null jika gagal.
+     */
     private File simpanBitmapKeFileSementara(Bitmap bitmap, String namaFile, int quality) {
         File file = new File(context.getCacheDir(), namaFile);
         try (FileOutputStream out = new FileOutputStream(file)) {
@@ -123,6 +150,12 @@ public class ImageProcessingManager {
         }
     }
 
+    /**
+     * Metode helper privat untuk menyimpan byte array ke file sementara di direktori cache.
+     *
+     * @param data Byte array yang akan disimpan.
+     * @return Objek File jika berhasil, atau null jika gagal.
+     */
     private File simpanByteKeFileSementara(byte[] data) {
         File fileOutput = new File(context.getCacheDir(), "hasil_kompresi.rle");
         try (FileOutputStream fos = new FileOutputStream(fileOutput)) {

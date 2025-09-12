@@ -10,13 +10,23 @@ import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Kelas utilitas yang menyediakan metode statis untuk melakukan kompresi gambar
+ * menggunakan algoritma Run-Length Encoding (RLE).
+ * Alur kerja utama meliputi konversi ke grayscale, kuantisasi warna,
+ * kompresi RLE, dan konversi ke format biner.
+ */
 public class RLECompressor {
     private static final String TAG = "RLECompressor";
 
     /**
-     * Mengonversi sebuah objek Bitmap menjadi array integer yang merepresentasikan nilai grayscale.
-     * @param bitmap Bitmap input yang akan dikonversi.
-     * @return Array integer berisi nilai grayscale (0-255) untuk setiap piksel.
+     * Mengonversi sebuah objek Bitmap berwarna menjadi array integer yang merepresentasikan nilai grayscale.
+     * Metode ini merupakan langkah pertama dalam pra-pemrosesan gambar untuk menyederhanakan data warna
+     * sebelum kompresi. Menggunakan formula standar NTSC untuk akurasi konversi.
+     *
+     * @param bitmap Bitmap input yang akan dikonversi. Tidak boleh null.
+     * @return Array integer yang berisi nilai grayscale (0-255) untuk setiap piksel.
+     * Mengembalikan array kosong jika input bitmap null atau terjadi error.
      */
     public static int[] convertBitmapToGrayscale(Bitmap bitmap) {
         if (bitmap == null) {
@@ -46,9 +56,13 @@ public class RLECompressor {
 
     /**
      * Melakukan kuantisasi pada data piksel grayscale untuk mengurangi jumlah level warna.
-     * @param grayscalePixels Array piksel grayscale asli (0-255).
+     * Proses ini bertujuan untuk meningkatkan jumlah piksel berurutan dengan nilai yang sama,
+     * sehingga membuat kompresi RLE menjadi lebih efektif.
+     *
+     * @param grayscalePixels Array piksel grayscale asli (rentang 0-255).
      * @param numLevels Jumlah level warna yang diinginkan setelah kuantisasi (misal: 2, 4, 8).
-     * @return Array piksel grayscale yang sudah terkuantisasi.
+     * Jika nilai di luar rentang (1-255), array asli akan dikembalikan.
+     * @return Array piksel grayscale yang sudah terkuantisasi sesuai dengan jumlah level yang ditentukan.
      */
     public static int[] quantizeGrayscale(int[] grayscalePixels, int numLevels) {
         if (grayscalePixels == null || grayscalePixels.length == 0) {
@@ -76,9 +90,13 @@ public class RLECompressor {
     }
 
     /**
-     * Mengompres array piksel grayscale menggunakan algoritma RLE.
-     * @param grayscalePixels Array piksel grayscale, biasanya hasil dari kuantisasi.
-     * @return Sebuah List yang berisi pasangan (nilai piksel, jumlah kemunculan).
+     * Mengompres array piksel grayscale menggunakan algoritma Run-Length Encoding (RLE).
+     * Metode ini menghitung jumlah kemunculan berurutan dari nilai piksel yang sama
+     * dan menyimpannya sebagai pasangan (nilai piksel, jumlah kemunculan).
+     *
+     * @param grayscalePixels Array piksel grayscale yang akan dikompres, biasanya hasil dari kuantisasi.
+     * @return Sebuah List yang berisi pasangan (nilai piksel, jumlah kemunculan) sebagai representasi data terkompresi.
+     * Mengembalikan list kosong jika input array null atau kosong.
      */
     public static List<MyPair<Integer, Integer>> compressRLE(int[] grayscalePixels) {
         if (grayscalePixels == null || grayscalePixels.length == 0) {
@@ -102,10 +120,14 @@ public class RLECompressor {
     }
 
     /**
-     * Mengonversi List data RLE menjadi format biner (byte array) yang siap dikirim.
-     * Format: [byte_nilai_piksel, byte_jumlah_kemunculan, ...]
+     * Mengonversi List data RLE menjadi format biner (byte array) yang siap untuk transmisi data.
+     * Format output adalah [byte_nilai_piksel_1, byte_jumlah_kemunculan_1, byte_nilai_piksel_2, ...].
+     * Metode ini juga menangani kasus di mana jumlah kemunculan (run count) melebihi 255
+     * dengan memecahnya menjadi beberapa segmen.
+     *
      * @param rleList List data RLE yang akan dikonversi.
-     * @return Byte array yang merepresentasikan data RLE.
+     * @return Byte array yang merepresentasikan data RLE dalam format biner.
+     * Mengembalikan byte array kosong jika input list null.
      */
     public static byte[] convertRleListToBinary(List<MyPair<Integer, Integer>> rleList) {
         if (rleList == null) {
@@ -124,7 +146,6 @@ public class RLECompressor {
             while (count > 0) {
                 int currentRun = Math.min(count, 255);
 
-                // PERBAIKAN: Blok try-catch dihapus karena baos.write() tidak melempar IOException
                 baos.write((byte) pixelValue);    // 1. Tulis nilai piksel
                 baos.write((byte) currentRun);    // 2. Tulis jumlah kemunculan
 

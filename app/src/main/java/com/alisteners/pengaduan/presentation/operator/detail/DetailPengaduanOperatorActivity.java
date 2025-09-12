@@ -19,7 +19,6 @@ import android.provider.MediaStore;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
-import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.MenuItem;
 import android.view.View;
@@ -38,7 +37,6 @@ import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
-import androidx.core.widget.NestedScrollView;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -59,7 +57,6 @@ import com.alisteners.pengaduan.presentation.fullscreenimage.FullScreenImageActi
 import com.alisteners.pengaduan.presentation.login.LoginActivity;
 import com.alisteners.pengaduan.util.StringUtils;
 import com.bumptech.glide.Glide;
-import com.google.android.material.appbar.AppBarLayout;
 import com.google.android.material.appbar.CollapsingToolbarLayout;
 import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.chip.Chip;
@@ -67,8 +64,6 @@ import com.google.android.material.chip.ChipGroup;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.textfield.TextInputEditText;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -91,6 +86,15 @@ import okhttp3.Request;
 import okhttp3.Response;
 import okhttp3.ResponseBody;
 
+/**
+ * Activity yang menampilkan detail lengkap dari sebuah pengaduan untuk Operator.
+ * Activity ini menyediakan fungsionalitas untuk:
+ * - Melihat semua detail laporan.
+ * - Memperbarui status laporan (Tindak Lanjut).
+ * - Mengunggah foto bukti tindak lanjut.
+ * - Menghapus laporan dengan alasan.
+ * - Mencetak/mengunduh laporan dalam format PDF.
+ */
 public class DetailPengaduanOperatorActivity extends AppCompatActivity {
 
     public static final String EXTRA_ID_PENGADUAN = "extra_id_pengaduan";
@@ -104,7 +108,7 @@ public class DetailPengaduanOperatorActivity extends AppCompatActivity {
     private final List<Uri> listUriFotoBaru = new ArrayList<>();
     private ActivityResultLauncher<Intent> imagePickerLauncher;
 
-    // Views
+    // --- Deklarasi Komponen UI ---
     private ProgressBar progressBar;
     private ImageView imageViewDetailFotoOperator;
     private CollapsingToolbarLayout collapsingToolbar;
@@ -144,11 +148,12 @@ public class DetailPengaduanOperatorActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Menginisialisasi semua referensi ke komponen view dari layout XML.
+     */
     private void inisialisasiView() {
         imageViewDetailFotoOperator = findViewById(R.id.imageViewDetailFotoOperator);
         collapsingToolbar = findViewById(R.id.collapsingToolbarDetailOperator);
-        AppBarLayout appBarLayout = findViewById(R.id.appBarLayoutDetailOperator);
-        NestedScrollView nestedScrollView = findViewById(R.id.nestedScrollViewOperator);
         textViewDetailKategoriOperator = findViewById(R.id.textViewDetailKategoriOperator);
         textViewDetailTanggalOperator = findViewById(R.id.textViewDetailTanggalOperator);
         textViewDetailNamaPelapor = findViewById(R.id.textViewDetailNamaPelapor);
@@ -156,7 +161,6 @@ public class DetailPengaduanOperatorActivity extends AppCompatActivity {
         textViewDetailLokasiOperator = findViewById(R.id.textViewDetailLokasiOperator);
         textViewDetailDeskripsiOperator = findViewById(R.id.textViewDetailDeskripsiOperator);
         progressBar = findViewById(R.id.progressBarDetailOperator);
-
         recyclerViewLogStatus = findViewById(R.id.recyclerViewLogStatus);
         cardAksiBaru = findViewById(R.id.cardAksiBaru);
         chipGroupStatus = findViewById(R.id.chipGroupStatus);
@@ -167,11 +171,13 @@ public class DetailPengaduanOperatorActivity extends AppCompatActivity {
         buttonHapusPengaduan = findViewById(R.id.buttonHapusPengaduan);
         buttonCetakLaporan = findViewById(R.id.buttonCetakLaporan);
         buttonCetakLaporan.setVisibility(View.GONE);
-
         horizontalScrollViewPreview = findViewById(R.id.horizontalScrollViewPreview);
         containerPreviewFoto = findViewById(R.id.containerPreviewFoto);
     }
 
+    /**
+     * Mengatur Toolbar, termasuk tombol kembali (up button).
+     */
     private void setupToolbar() {
         Toolbar toolbar = findViewById(R.id.toolbarDetailOperator);
         setSupportActionBar(toolbar);
@@ -181,6 +187,9 @@ public class DetailPengaduanOperatorActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Menginisialisasi ViewModel menggunakan ViewModelFactory untuk menyuntikkan semua dependensi UseCase.
+     */
     private void setupViewModel() {
         PengaduanRepository pengaduanRepo = new PengaduanRepositoryImpl(this);
         OperatorRepository operatorRepo = new OperatorRepositoryImpl(this);
@@ -191,6 +200,9 @@ public class DetailPengaduanOperatorActivity extends AppCompatActivity {
         viewModel = new ViewModelProvider(this, factory).get(DetailOperatorViewModel.class);
     }
 
+    /**
+     * Mengatur RecyclerView untuk menampilkan timeline tindak lanjut.
+     */
     private void setupRecyclerView() {
         recyclerViewLogStatus.setLayoutManager(new LinearLayoutManager(this));
         recyclerViewLogStatus.setNestedScrollingEnabled(false);
@@ -198,6 +210,9 @@ public class DetailPengaduanOperatorActivity extends AppCompatActivity {
         recyclerViewLogStatus.setAdapter(logStatusAdapter);
     }
 
+    /**
+     * Menginisialisasi ActivityResultLauncher untuk menangani hasil dari pemilihan gambar.
+     */
     private void setupImagePickerLauncher() {
         imagePickerLauncher = registerForActivityResult(
                 new ActivityResultContracts.StartActivityForResult(),
@@ -219,6 +234,9 @@ public class DetailPengaduanOperatorActivity extends AppCompatActivity {
                 });
     }
 
+    /**
+     * Mengatur semua listener untuk interaksi pengguna.
+     */
     private void setupListeners() {
         buttonPilihFotoTindakLanjut.setOnClickListener(v -> {
             Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
@@ -242,6 +260,9 @@ public class DetailPengaduanOperatorActivity extends AppCompatActivity {
         textViewDetailLokasiOperator.setOnClickListener(v -> bukaLokasiDiPeta());
     }
 
+    /**
+     * Mengamati semua LiveData dari ViewModel untuk memperbarui UI secara reaktif.
+     */
     private void observeViewModel() {
         viewModel.isLoading.observe(this, isLoading -> {
             if (isLoading != null) progressBar.setVisibility(isLoading ? View.VISIBLE : View.GONE);
@@ -276,23 +297,24 @@ public class DetailPengaduanOperatorActivity extends AppCompatActivity {
             if (message != null && !message.isEmpty()) {
                 Toast.makeText(this, message, Toast.LENGTH_LONG).show();
                 setResult(RESULT_OK);
-
                 Intent intent = new Intent("com.alisteners.pengaduan.PENGADUAN_UPDATED");
                 LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
-
-// Tunda finish() selama sepersekian detik untuk memastikan siaran terkirim
-                new Handler(Looper.getMainLooper()).postDelayed(this::finish, 200); // 200 milidetik
+                new Handler(Looper.getMainLooper()).postDelayed(this::finish, 200);
             }
         });
 
         viewModel.errorMessage.observe(this, error -> {
             if (error != null && !error.isEmpty()) {
-                buttonSimpanPerubahan.setEnabled(true); // Aktifkan lagi tombolnya jika error
+                buttonSimpanPerubahan.setEnabled(true);
                 Toast.makeText(this, "Error: " + error, Toast.LENGTH_LONG).show();
             }
         });
     }
 
+    /**
+     * Mengisi semua komponen UI dengan data dari objek {@link DetailPengaduan}.
+     * @param detail Objek detail pengaduan yang diterima dari ViewModel.
+     */
     @SuppressLint("SetTextI18n")
     private void populateUi(DetailPengaduan detail) {
         collapsingToolbar.setTitle(detail.kategori);
@@ -303,25 +325,28 @@ public class DetailPengaduanOperatorActivity extends AppCompatActivity {
         textViewDetailDeskripsiOperator.setText(detail.deskripsi);
         setupChipStatus(detail.status);
 
-        // Mengisi RecyclerView Timeline
         if (detail.getRiwayatTindakLanjut() != null && !detail.getRiwayatTindakLanjut().isEmpty()) {
             List<LogStatusItem> riwayat = new ArrayList<>(detail.getRiwayatTindakLanjut());
             Collections.reverse(riwayat);
             logStatusAdapter.updateData(riwayat);
             recyclerViewLogStatus.setVisibility(View.VISIBLE);
         } else {
-            logStatusAdapter.updateData(new ArrayList<>());
             recyclerViewLogStatus.setVisibility(View.GONE);
         }
 
-        // Sembunyikan Form Aksi Jika Sudah Selesai
         if ("selesai".equalsIgnoreCase(detail.status)) {
             cardAksiBaru.setVisibility(View.GONE);
+            buttonCetakLaporan.setVisibility(View.VISIBLE);
+            buttonCetakLaporan.setOnClickListener(v -> downloadLaporan(false));
+            buttonCetakLaporan.setOnLongClickListener(v -> {
+                downloadLaporan(true);
+                return true;
+            });
         } else {
             cardAksiBaru.setVisibility(View.VISIBLE);
+            buttonCetakLaporan.setVisibility(View.GONE);
         }
 
-        // Reset form aksi baru
         editTextTindakLanjut.setText("");
         editTextTindakLanjut.setError(null);
         chipGroupStatus.clearCheck();
@@ -338,25 +363,15 @@ public class DetailPengaduanOperatorActivity extends AppCompatActivity {
                 startActivity(intent);
             });
         }
-
-        // Tampilkan tombol Cetak Laporan hanya jika status sudah 'selesai'
-        if ("selesai".equalsIgnoreCase(detail.status)) {
-            buttonCetakLaporan.setVisibility(View.VISIBLE);
-            buttonCetakLaporan.setOnClickListener(v -> downloadLaporan(false));
-            buttonCetakLaporan.setOnLongClickListener(v -> {
-                downloadLaporan(true);
-                return true;
-            });
-        } else {
-            buttonCetakLaporan.setVisibility(View.GONE);
-        }
     }
 
+    /**
+     * Memvalidasi dan memulai proses penyimpanan perubahan tindak lanjut.
+     */
     private void simpanPerubahan() {
         if (!buttonSimpanPerubahan.isEnabled()) {
             return;
         }
-
         if (statusTerpilih == null || statusTerpilih.isEmpty()) {
             Toast.makeText(this, "Pilih status baru terlebih dahulu.", Toast.LENGTH_SHORT).show();
             return;
@@ -367,38 +382,33 @@ public class DetailPengaduanOperatorActivity extends AppCompatActivity {
             editTextTindakLanjut.requestFocus();
             return;
         }
-
         buttonSimpanPerubahan.setEnabled(false);
         progressBar.setVisibility(View.VISIBLE);
-
         compressImagesAndUpload(catatan);
     }
 
+    /**
+     * Mengompres gambar yang dipilih oleh operator di background thread sebelum diunggah.
+     * @param catatan Catatan yang akan dikirim bersamaan dengan file.
+     */
     private void compressImagesAndUpload(String catatan) {
         ExecutorService executor = Executors.newSingleThreadExecutor();
         Handler handler = new Handler(Looper.getMainLooper());
-
         executor.execute(() -> {
             final List<File> compressedFiles = new ArrayList<>();
             try {
                 for (Uri uri : listUriFotoBaru) {
                     InputStream inputStream = getContentResolver().openInputStream(uri);
                     Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
-
                     File tempFile = new File(getCacheDir(), "upload_" + System.currentTimeMillis() + ".jpg");
                     FileOutputStream fos = new FileOutputStream(tempFile);
-
                     bitmap.compress(Bitmap.CompressFormat.JPEG, 60, fos);
-
                     fos.flush();
                     fos.close();
                     if (inputStream != null) inputStream.close();
-
                     compressedFiles.add(tempFile);
                 }
-
                 handler.post(() -> kirimDataKeServer(compressedFiles, catatan));
-
             } catch (Exception e) {
                 Log.e(TAG, "Gagal melakukan kompresi gambar", e);
                 handler.post(() -> {
@@ -410,25 +420,25 @@ public class DetailPengaduanOperatorActivity extends AppCompatActivity {
         });
     }
 
+    /**
+     * Mengirim data yang sudah final (termasuk file terkompresi) ke ViewModel.
+     */
     private void kirimDataKeServer(List<File> filesToUpload, String catatan) {
         String requestToken = UUID.randomUUID().toString();
         SharedPreferences sp = getSharedPreferences(LoginActivity.SHARED_PREFS, MODE_PRIVATE);
         int idOperator = sp.getInt(LoginActivity.KEY_ID_USER, -1);
-
         if (idOperator == -1) {
             Toast.makeText(this, "Sesi operator tidak valid.", Toast.LENGTH_SHORT).show();
             progressBar.setVisibility(View.GONE);
             buttonSimpanPerubahan.setEnabled(true);
             return;
         }
-
         viewModel.simpanPerubahan(idPengaduan, idOperator, statusTerpilih, catatan, filesToUpload, requestToken);
     }
 
-    private int dpToPx(int dp) {
-        return (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, dp, getResources().getDisplayMetrics());
-    }
-
+    /**
+     * Menampilkan pratinjau (preview) dari gambar-gambar yang dipilih untuk diunggah.
+     */
     private void tampilkanFotoPreviewBaru() {
         containerPreviewFoto.removeAllViews();
         if (listUriFotoBaru.isEmpty()) {
@@ -449,6 +459,9 @@ public class DetailPengaduanOperatorActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Membuka aplikasi peta (Google Maps) dengan koordinat lokasi pengaduan.
+     */
     private void bukaLokasiDiPeta() {
         if (detailPengaduan != null && detailPengaduan.latitude != 0 && detailPengaduan.longitude != 0) {
             String label = "Lokasi: " + detailPengaduan.kategori;
@@ -466,37 +479,26 @@ public class DetailPengaduanOperatorActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Mengatur tampilan Chip (teks, warna, ikon) berdasarkan status pengaduan.
+     * @param status String status dari item pengaduan.
+     */
     private void setupChipStatus(String status) {
-        if (status == null) {
-            chipDetailStatusOperator.setVisibility(View.GONE);
-            return;
-        }
-        chipDetailStatusOperator.setVisibility(View.VISIBLE);
+        if (status == null) return;
         chipDetailStatusOperator.setText(StringUtils.capitalizeFirstLetter(status));
-        int colorRes;
-        int iconRes = switch (status.toLowerCase()) {
-            case "diproses" -> {
-                colorRes = R.color.status_diproses_bg;
-                yield R.drawable.ic_status_diproses;
-            }
-            case "selesai" -> {
-                colorRes = R.color.status_selesai_bg;
-                yield R.drawable.ic_status_selesai;
-            }
-            default -> {
-                colorRes = R.color.status_menunggu_bg;
-                yield R.drawable.ic_status_menunggu;
-            }
+        int colorRes = switch (status.toLowerCase()) {
+            case "diproses" -> R.color.status_diproses_bg;
+            case "selesai" -> R.color.status_selesai_bg;
+            default -> R.color.status_menunggu_bg;
         };
         chipDetailStatusOperator.setChipBackgroundColorResource(colorRes);
-        if (iconRes != 0) {
-            chipDetailStatusOperator.setChipIconResource(iconRes);
-            chipDetailStatusOperator.setChipIconVisible(true);
-        } else {
-            chipDetailStatusOperator.setChipIconVisible(false);
-        }
     }
 
+    /**
+     * Memformat string tanggal dari format "yyyy-MM-dd HH:mm:ss" menjadi "dd MMMM yy, HH:mm".
+     * @param tanggalMySQL String tanggal dari server.
+     * @return String tanggal yang sudah diformat.
+     */
     private String formatTanggal(String tanggalMySQL) {
         if (tanggalMySQL == null || tanggalMySQL.isEmpty()) return "N/A";
         SimpleDateFormat inputFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
@@ -509,45 +511,39 @@ public class DetailPengaduanOperatorActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Menampilkan dialog konfirmasi untuk menghapus pengaduan.
+     * Memerlukan input alasan penghapusan.
+     */
     private void tampilkanDialogHapus() {
-        // Buat custom view untuk dialog
         View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_hapus_dengan_alasan, null);
         final TextInputEditText inputAlasan = dialogView.findViewById(R.id.inputAlasanHapus);
-
-        MaterialAlertDialogBuilder dialogBuilder = new MaterialAlertDialogBuilder(this)
+        AlertDialog dialog = new MaterialAlertDialogBuilder(this)
                 .setTitle("Hapus Pengaduan")
                 .setView(dialogView)
                 .setNegativeButton("Batal", null)
-                .setPositiveButton("Hapus", (dialog, which) -> {
+                .setPositiveButton("Hapus", (d, which) -> {
                     String alasan = Objects.requireNonNull(inputAlasan.getText()).toString().trim();
                     viewModel.hapusPengaduan(idPengaduan, alasan);
-                });
-
-        AlertDialog dialog = dialogBuilder.create();
+                }).create();
         dialog.show();
-
-        // Tombol "Hapus" awalnya dinonaktifkan
         Button hapusButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
         hapusButton.setEnabled(false);
-
-        // Tambahkan TextWatcher untuk mengaktifkan tombol jika alasan sudah diisi
         inputAlasan.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-            }
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
                 hapusButton.setEnabled(!s.toString().trim().isEmpty());
             }
-
-            @Override
-            public void afterTextChanged(Editable s) {
-            }
+            @Override public void afterTextChanged(Editable s) {}
         });
     }
 
     // === Bagian CETAK LAPORAN ===
+
+    /**
+     * Memulai proses pengunduhan laporan PDF.
+     * @param force true jika ingin memaksa pembuatan ulang PDF di server.
+     */
     private void downloadLaporan(boolean force) {
         SharedPreferences sp = getSharedPreferences(LoginActivity.SHARED_PREFS, MODE_PRIVATE);
         int idOperator = sp.getInt(LoginActivity.KEY_ID_USER, -1);
@@ -555,98 +551,93 @@ public class DetailPengaduanOperatorActivity extends AppCompatActivity {
             Toast.makeText(this, "Sesi operator tidak valid.", Toast.LENGTH_SHORT).show();
             return;
         }
-
-        String url = ApiConfig.URL_CETAK_LAPORAN
-                + "?idPengaduan=" + idPengaduan
-                + "&idOperator=" + idOperator
-                + (force ? "&force=1" : "");
-
+        String url = ApiConfig.URL_CETAK_LAPORAN + "?idPengaduan=" + idPengaduan + "&idOperator=" + idOperator + (force ? "&force=1" : "");
         String fallbackName = "Laporan-Pengaduan-" + idPengaduan + ".pdf";
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            Toast.makeText(this, "Mengunduh ke Unduhan/Pengaduan…", Toast.LENGTH_SHORT).show();
-            buttonCetakLaporan.setEnabled(false);
-            progressBar.setVisibility(View.VISIBLE);
-
-            new Thread(() -> {
-                OkHttpClient client = new OkHttpClient.Builder().build();
-                Request req = new Request.Builder().url(url).build();
-                try (Response resp = client.newCall(req).execute()) {
-                    if (!resp.isSuccessful()) {
-                        runOnUiThread(() -> {
-                            progressBar.setVisibility(View.GONE);
-                            buttonCetakLaporan.setEnabled(true);
-                            Toast.makeText(this, "Gagal mengunduh (" + resp.code() + ")", Toast.LENGTH_LONG).show();
-                        });
-                        return;
-                    }
-                    ResponseBody body = resp.body();
-                    if (body == null) throw new IOException("Body kosong");
-
-                    String cd = resp.header("Content-Disposition");
-                    String fileName = parseFileNameFromContentDisposition(cd, fallbackName);
-
-                    Uri saved = savePdfToPublicDownloads29(fileName, body.byteStream());
-                    runOnUiThread(() -> {
-                        progressBar.setVisibility(View.GONE);
-                        buttonCetakLaporan.setEnabled(true);
-                        Toast.makeText(this, "Tersimpan di Unduhan/Pengaduan", Toast.LENGTH_LONG).show();
-                        openPdf(saved);
-                    });
-                } catch (Exception e) {
-                    runOnUiThread(() -> {
-                        progressBar.setVisibility(View.GONE);
-                        buttonCetakLaporan.setEnabled(true);
-                        Toast.makeText(this, "Kesalahan jaringan/IO: " + e.getMessage(), Toast.LENGTH_LONG).show();
-                    });
-                }
-            }).start();
-
+            // Panggil metode baru yang sudah dianotasi
+            downloadLaporanForQ(url, fallbackName);
         } else {
-            try {
-                File sub = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "Pengaduan");
-                sub.mkdirs();
+            // Menggunakan DownloadManager untuk Android 9 ke bawah
+            downloadWithDownloadManager(url, fallbackName);
+        }
+    }
 
-                DownloadManager.Request req = new DownloadManager.Request(Uri.parse(url));
-                req.setTitle("Laporan Pengaduan #" + idPengaduan);
-                req.setDescription("Mengunduh PDF ke folder Unduhan");
-                req.setMimeType("application/pdf");
-                req.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
-                req.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, "Pengaduan/" + fallbackName);
+    /**
+     * [METODE BARU] Menangani logika unduh untuk Android 10 (Q) ke atas.
+     * Dianotasi dengan @RequiresApi untuk mengatasi warning dari Linter.
+     */
+    @RequiresApi(Build.VERSION_CODES.Q)
+    private void downloadLaporanForQ(String url, String fallbackName) {
+        Toast.makeText(this, "Mengunduh ke Unduhan/Pengaduan…", Toast.LENGTH_SHORT).show();
+        buttonCetakLaporan.setEnabled(false);
+        progressBar.setVisibility(View.VISIBLE);
+        new Thread(() -> {
+            OkHttpClient client = new OkHttpClient();
+            Request req = new Request.Builder().url(url).build();
+            try (Response resp = client.newCall(req).execute()) {
+                if (!resp.isSuccessful()) throw new IOException("Gagal mengunduh: " + resp.code());
+                ResponseBody body = resp.body();
+                if (body == null) throw new IOException("Body respons kosong");
 
-                DownloadManager dm = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
-                dm.enqueue(req);
-                Toast.makeText(this, "Mengunduh ke Unduhan/Pengaduan…", Toast.LENGTH_SHORT).show();
+                String fileName = parseFileNameFromContentDisposition(resp.header("Content-Disposition"), fallbackName);
+                Uri savedUri = savePdfToPublicDownloads29(fileName, body.byteStream());
 
+                runOnUiThread(() -> {
+                    progressBar.setVisibility(View.GONE);
+                    buttonCetakLaporan.setEnabled(true);
+                    Toast.makeText(this, "Tersimpan di Unduhan/Pengaduan", Toast.LENGTH_LONG).show();
+                    openPdf(savedUri);
+                });
             } catch (Exception e) {
-                try { startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url))); }
-                catch (ActivityNotFoundException ex) { Toast.makeText(this, "Gagal memulai unduhan.", Toast.LENGTH_LONG).show(); }
+                runOnUiThread(() -> {
+                    progressBar.setVisibility(View.GONE);
+                    buttonCetakLaporan.setEnabled(true);
+                    Toast.makeText(this, "Kesalahan: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                });
             }
+        }).start();
+    }
+
+    /**
+     * Mengunduh file menggunakan DownloadManager bawaan Android.
+     * Metode ini digunakan untuk Android 9 (API 28) ke bawah.
+     */
+    private void downloadWithDownloadManager(String url, String fallbackName) {
+        try {
+            File subDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "Pengaduan");
+            if (!subDir.exists()) subDir.mkdirs();
+            DownloadManager.Request req = new DownloadManager.Request(Uri.parse(url));
+            req.setTitle("Laporan Pengaduan #" + idPengaduan);
+            req.setDescription("Mengunduh PDF...");
+            req.setMimeType("application/pdf");
+            req.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
+            req.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, "Pengaduan/" + fallbackName);
+            ((DownloadManager) getSystemService(DOWNLOAD_SERVICE)).enqueue(req);
+            Toast.makeText(this, "Mengunduh ke Unduhan/Pengaduan…", Toast.LENGTH_SHORT).show();
+        } catch (Exception e) {
+            Toast.makeText(this, "Gagal memulai unduhan.", Toast.LENGTH_LONG).show();
         }
     }
 
     @RequiresApi(Build.VERSION_CODES.Q)
     private Uri savePdfToPublicDownloads29(String fileName, InputStream in) throws IOException {
-        Uri collection = MediaStore.Downloads.EXTERNAL_CONTENT_URI;
         ContentValues cv = new ContentValues();
         cv.put(MediaStore.MediaColumns.DISPLAY_NAME, fileName);
         cv.put(MediaStore.MediaColumns.MIME_TYPE, "application/pdf");
         cv.put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/Pengaduan");
         cv.put(MediaStore.MediaColumns.IS_PENDING, 1);
 
-        Uri uri = getContentResolver().insert(collection, cv);
+        Uri uri = getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, cv);
         if (uri == null) throw new IOException("Gagal insert MediaStore");
 
-        try (OutputStream os = getContentResolver().openOutputStream(uri);
-             BufferedInputStream bis = new BufferedInputStream(in);
-             BufferedOutputStream bos = new BufferedOutputStream(os)) {
-
+        try (OutputStream os = getContentResolver().openOutputStream(uri)) {
+            if (os == null) throw new IOException("Gagal membuka output stream");
             byte[] buf = new byte[8192];
-            int r;
-            while ((r = bis.read(buf)) != -1) {
-                bos.write(buf, 0, r);
+            int len;
+            while ((len = in.read(buf)) > 0) {
+                os.write(buf, 0, len);
             }
-            bos.flush();
         } finally {
             ContentValues done = new ContentValues();
             done.put(MediaStore.MediaColumns.IS_PENDING, 0);
@@ -657,25 +648,22 @@ public class DetailPengaduanOperatorActivity extends AppCompatActivity {
 
     private String parseFileNameFromContentDisposition(String cd, String fallback) {
         if (cd == null) return fallback;
-        try {
-            for (String part : cd.split(";")) {
-                part = part.trim();
-                if (part.toLowerCase().startsWith("filename=")) {
-                    String v = part.substring(9).trim();
-                    if (v.startsWith("\"") && v.endsWith("\"")) v = v.substring(1, v.length() - 1);
-                    if (!v.isEmpty()) return v;
-                }
+        for (String part : cd.split(";")) {
+            part = part.trim();
+            if (part.toLowerCase().startsWith("filename=")) {
+                String v = part.substring(9).trim().replace("\"", "");
+                if (!v.isEmpty()) return v;
             }
-        } catch (Exception ignored) {}
+        }
         return fallback;
     }
 
     private void openPdf(Uri uri) {
-        Intent view = new Intent(Intent.ACTION_VIEW);
-        view.setDataAndType(uri, "application/pdf");
-        view.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        Intent viewIntent = new Intent(Intent.ACTION_VIEW);
+        viewIntent.setDataAndType(uri, "application/pdf");
+        viewIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
         try {
-            startActivity(view);
+            startActivity(viewIntent);
         } catch (ActivityNotFoundException e) {
             Toast.makeText(this, "PDF tersimpan. Buka dari folder Unduhan.", Toast.LENGTH_LONG).show();
         }

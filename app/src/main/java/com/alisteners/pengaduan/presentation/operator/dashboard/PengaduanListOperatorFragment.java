@@ -31,22 +31,35 @@ import com.alisteners.pengaduan.presentation.operator.detail.DetailPengaduanOper
 
 import java.util.ArrayList;
 
+/**
+ * Fragment yang bertanggung jawab untuk menampilkan daftar pengaduan berdasarkan status tertentu.
+ * Fragment ini dirancang untuk dapat digunakan kembali (reusable) oleh ViewPager di
+ * {@link DashboardOperatorFragment} untuk setiap tab (Baru, Diproses, Selesai).
+ * Juga dilengkapi dengan BroadcastReceiver untuk me-refresh data secara otomatis
+ * ketika ada pembaruan dari halaman lain.
+ */
 public class PengaduanListOperatorFragment extends Fragment {
 
     private static final String TAG = "PengaduanListFragment";
     private static final String ARG_STATUS = "arg_status";
     private String statusFilter;
 
+    // --- Deklarasi View & Komponen ---
     private OperatorListViewModel viewModel;
     private RecyclerView recyclerView;
     private PengaduanPublikAdapter adapter;
     private SwipeRefreshLayout swipeRefreshLayout;
     private ProgressBar progressBar;
     private TextView textViewPesan;
+    private BroadcastReceiver updateReceiver; // Receiver untuk sinyal update
 
-    // BroadcastReceiver untuk menerima sinyal refresh
-    private BroadcastReceiver updateReceiver;
-
+    /**
+     * Metode pabrik (factory method) untuk membuat instance baru dari fragment ini.
+     * Menggunakan metode ini adalah praktik terbaik untuk meneruskan argumen ke fragment.
+     *
+     * @param status Status pengaduan yang akan ditampilkan oleh fragment ini (misal: "menunggu").
+     * @return Instance baru dari PengaduanListOperatorFragment.
+     */
     public static PengaduanListOperatorFragment newInstance(String status) {
         PengaduanListOperatorFragment fragment = new PengaduanListOperatorFragment();
         Bundle args = new Bundle();
@@ -62,10 +75,10 @@ public class PengaduanListOperatorFragment extends Fragment {
             statusFilter = getArguments().getString(ARG_STATUS);
         }
 
+        // Inisialisasi BroadcastReceiver untuk mendengarkan sinyal "PENGADUAN_UPDATED"
         updateReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
-                // Jika fragment ini terlihat, muat ulang datanya
                 if (isResumed() && viewModel != null) {
                     Log.d(TAG, "Menerima sinyal update untuk status: " + statusFilter + ". Memuat ulang...");
                     swipeRefreshLayout.setRefreshing(true);
@@ -91,7 +104,9 @@ public class PengaduanListOperatorFragment extends Fragment {
         observeViewModel();
     }
 
-    // onResume akan memuat data awal dan mendaftarkan receiver
+    /**
+     * Mendaftarkan BroadcastReceiver dan memuat data awal saat fragment menjadi terlihat.
+     */
     @Override
     public void onResume() {
         super.onResume();
@@ -102,13 +117,19 @@ public class PengaduanListOperatorFragment extends Fragment {
         );
     }
 
-    // onPause akan membatalkan pendaftaran receiver
+    /**
+     * Melepaskan pendaftaran BroadcastReceiver saat fragment tidak lagi terlihat
+     * untuk mencegah kebocoran memori (memory leak).
+     */
     @Override
     public void onPause() {
         super.onPause();
         LocalBroadcastManager.getInstance(requireContext()).unregisterReceiver(updateReceiver);
     }
 
+    /**
+     * Menginisialisasi semua referensi ke komponen view dari layout XML.
+     */
     private void inisialisasiView(View view) {
         recyclerView = view.findViewById(R.id.recyclerViewOperator);
         swipeRefreshLayout = view.findViewById(R.id.swipeRefreshOperatorList);
@@ -116,12 +137,18 @@ public class PengaduanListOperatorFragment extends Fragment {
         textViewPesan = view.findViewById(R.id.textViewPesanOperator);
     }
 
+    /**
+     * Mengatur RecyclerView, termasuk adapter dan layout manager.
+     */
     private void setupRecyclerView() {
         adapter = new PengaduanPublikAdapter(new ArrayList<>(), requireContext());
         recyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
         recyclerView.setAdapter(adapter);
     }
 
+    /**
+     * Menginisialisasi ViewModel menggunakan ViewModelFactory.
+     */
     private void setupViewModel() {
         OperatorRepository repository = new OperatorRepositoryImpl(requireActivity().getApplicationContext());
         GetPengaduanOperatorUseCase useCase = new GetPengaduanOperatorUseCase(repository);
@@ -129,7 +156,9 @@ public class PengaduanListOperatorFragment extends Fragment {
         viewModel = new ViewModelProvider(this, factory).get(OperatorListViewModel.class);
     }
 
-
+    /**
+     * Mengatur semua listener untuk interaksi pengguna, seperti swipe-to-refresh dan klik item.
+     */
     private void setupListeners() {
         swipeRefreshLayout.setOnRefreshListener(() -> {
             Log.d(TAG, "Swipe to refresh untuk status: " + statusFilter);
@@ -139,11 +168,14 @@ public class PengaduanListOperatorFragment extends Fragment {
         adapter.setOnItemClickListener(item -> {
             Intent intent = new Intent(requireActivity(), DetailPengaduanOperatorActivity.class);
             intent.putExtra(DetailPengaduanOperatorActivity.EXTRA_ID_PENGADUAN, item.getIdPengaduan());
-
             startActivity(intent);
         });
     }
 
+    /**
+     * Mengamati LiveData dari ViewModel untuk memperbarui UI secara reaktif
+     * terhadap perubahan data, status loading, atau pesan error.
+     */
     @SuppressLint("SetTextI18n")
     private void observeViewModel() {
         viewModel.isLoading.observe(getViewLifecycleOwner(), isLoading -> {
@@ -154,8 +186,7 @@ public class PengaduanListOperatorFragment extends Fragment {
                 } else {
                     progressBar.setVisibility(View.GONE);
                 }
-
-                // Set status refreshing dari swipe layout
+                // Hentikan animasi swipe-refresh jika proses loading sudah selesai
                 if(!isLoading) {
                     swipeRefreshLayout.setRefreshing(false);
                 }

@@ -33,16 +33,30 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
+/**
+ * Adapter untuk {@link RecyclerView} yang menampilkan riwayat tindak lanjut pengaduan
+ * dalam format timeline (garis waktu) visual.
+ * Kelas ini menggunakan library TimelineView untuk membuat garis dan penanda (marker).
+ */
 public class LogStatusAdapter extends RecyclerView.Adapter<LogStatusAdapter.LogViewHolder> {
 
     private final List<LogStatusItem> logList;
     private final Context context;
 
+    /**
+     * Konstruktor untuk adapter.
+     * @param logList List awal dari data log/riwayat.
+     * @param context Context dari Activity.
+     */
     public LogStatusAdapter(List<LogStatusItem> logList, Context context) {
         this.logList = logList != null ? logList : new ArrayList<>();
         this.context = context;
     }
 
+    /**
+     * Menentukan tipe view untuk TimelineView (awal, tengah, atau akhir)
+     * berdasarkan posisi item. Ini penting untuk menggambar garis timeline dengan benar.
+     */
     @Override
     public int getItemViewType(int position) {
         return TimelineView.getTimeLineViewType(position, getItemCount());
@@ -66,6 +80,10 @@ public class LogStatusAdapter extends RecyclerView.Adapter<LogStatusAdapter.LogV
         return logList.size();
     }
 
+    /**
+     * Memperbarui dataset adapter dengan daftar log yang baru.
+     * @param newLogList List baru dari {@link LogStatusItem}.
+     */
     @SuppressLint("NotifyDataSetChanged")
     public void updateData(List<LogStatusItem> newLogList) {
         this.logList.clear();
@@ -75,10 +93,17 @@ public class LogStatusAdapter extends RecyclerView.Adapter<LogStatusAdapter.LogV
         notifyDataSetChanged();
     }
 
+    /**
+     * Mengembalikan list data log saat ini.
+     * @return List dari {@link LogStatusItem}.
+     */
     public List<LogStatusItem> getLogList() {
         return logList;
     }
 
+    /**
+     * ViewHolder yang merepresentasikan satu "kejadian" atau titik pada timeline.
+     */
     class LogViewHolder extends RecyclerView.ViewHolder {
         TimelineView mTimelineView;
         TextView textViewStatusLog, textViewOperatorTimestamp, textViewCatatanLog;
@@ -88,7 +113,7 @@ public class LogStatusAdapter extends RecyclerView.Adapter<LogStatusAdapter.LogV
         LogViewHolder(View itemView, int viewType) {
             super(itemView);
             mTimelineView = itemView.findViewById(R.id.timeline);
-            mTimelineView.initLine(viewType);
+            mTimelineView.initLine(viewType); // Inisialisasi garis timeline sesuai tipenya
 
             textViewStatusLog = itemView.findViewById(R.id.textViewStatusLog);
             textViewOperatorTimestamp = itemView.findViewById(R.id.textViewOperatorTimestamp);
@@ -97,14 +122,17 @@ public class LogStatusAdapter extends RecyclerView.Adapter<LogStatusAdapter.LogV
             containerLogFoto = itemView.findViewById(R.id.containerLogFoto);
         }
 
+        /**
+         * Mengikat data dari objek {@link LogStatusItem} ke komponen UI di dalam ViewHolder.
+         * @param logItem Objek yang berisi data untuk satu log.
+         */
         @SuppressLint("SetTextI18n")
         void bind(final LogStatusItem logItem) {
-            // 1. Selalu atur Status dan Info Waktu
             textViewStatusLog.setText(StringUtils.capitalizeFirstLetter(logItem.status));
             String operatorInfo = "Diperbarui oleh " + (logItem.namaOperator != null ? logItem.namaOperator : "Sistem");
             textViewOperatorTimestamp.setText(operatorInfo + " pada " + formatTanggal(logItem.timestamp));
 
-            // 2. Atur ikon marker berdasarkan status
+            // Atur ikon marker pada timeline berdasarkan status
             if (logItem.status.equalsIgnoreCase("selesai")) {
                 mTimelineView.setMarker(ContextCompat.getDrawable(context, R.drawable.ic_status_selesai_circle));
             } else if (logItem.status.equalsIgnoreCase("diproses")) {
@@ -113,29 +141,30 @@ public class LogStatusAdapter extends RecyclerView.Adapter<LogStatusAdapter.LogV
                 mTimelineView.setMarker(ContextCompat.getDrawable(context, R.drawable.ic_status_menunggu_circle));
             }
 
-            // 3. Atur Catatan dengan blok if-else yang aman
+            // Tampilkan atau sembunyikan catatan
             if (logItem.catatan != null && !logItem.catatan.trim().isEmpty()) {
                 textViewCatatanLog.setVisibility(View.VISIBLE);
                 textViewCatatanLog.setText(logItem.catatan);
             } else {
-                // WAJIB: Sembunyikan dan bersihkan teks jika tidak ada catatan
                 textViewCatatanLog.setVisibility(View.GONE);
-                textViewCatatanLog.setText("");
             }
 
-            // 4. Atur Galeri Foto dengan blok if-else yang aman
+            // Tampilkan atau sembunyikan galeri foto bukti
             if (logItem.fotoBukti != null && !logItem.fotoBukti.isEmpty()) {
                 horizontalScrollViewLogFoto.setVisibility(View.VISIBLE);
                 tampilkanFoto(logItem.fotoBukti);
             } else {
-                // WAJIB: Sembunyikan dan bersihkan kontainer jika tidak ada foto
                 horizontalScrollViewLogFoto.setVisibility(View.GONE);
-                containerLogFoto.removeAllViews();
             }
         }
 
+        /**
+         * Secara dinamis membuat dan menampilkan pratinjau gambar bukti di dalam
+         * HorizontalScrollView.
+         * @param listPathFoto Daftar path/URL relatif dari gambar-gambar.
+         */
         private void tampilkanFoto(List<String> listPathFoto) {
-            containerLogFoto.removeAllViews(); // Selalu bersihkan view lama
+            containerLogFoto.removeAllViews(); // Selalu bersihkan view lama sebelum menambahkan yang baru
             for (String pathFoto : listPathFoto) {
                 ImageView imageView = new ImageView(context);
                 LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(dpToPx(80), dpToPx(80));
@@ -155,6 +184,11 @@ public class LogStatusAdapter extends RecyclerView.Adapter<LogStatusAdapter.LogV
             }
         }
 
+        /**
+         * Memformat string tanggal dari format server ke format yang lebih mudah dibaca.
+         * @param tanggalMySQL String tanggal dari server.
+         * @return String tanggal yang sudah diformat.
+         */
         private String formatTanggal(String tanggalMySQL) {
             if (tanggalMySQL == null || tanggalMySQL.isEmpty()) return "N/A";
             SimpleDateFormat inputFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
@@ -167,6 +201,11 @@ public class LogStatusAdapter extends RecyclerView.Adapter<LogStatusAdapter.LogV
             }
         }
 
+        /**
+         * Mengonversi nilai Dimen (dp) ke Piksel (px).
+         * @param dp Nilai dalam dp.
+         * @return Nilai ekuivalen dalam px.
+         */
         private int dpToPx(int dp) {
             return (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, dp, context.getResources().getDisplayMetrics());
         }

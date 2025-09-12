@@ -6,11 +6,9 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
-import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.EditText;
 import android.widget.ProgressBar;
 
 import androidx.appcompat.widget.SearchView;
@@ -36,17 +34,25 @@ import com.google.android.material.chip.ChipGroup;
 
 import java.util.ArrayList;
 
+/**
+ * Fragment yang bertanggung jawab untuk fungsionalitas pencarian pengaduan bagi operator.
+ * Memungkinkan operator untuk mencari pengaduan berdasarkan kata kunci dan memfilternya
+ * berdasarkan status. Mengimplementasikan logika 'debounce' untuk efisiensi pencarian.
+ */
 public class CariFragment extends Fragment {
 
     private static final String TAG = "CariFragment";
+
+    // --- Deklarasi View & Adapter ---
     private CariViewModel viewModel;
     private androidx.appcompat.widget.SearchView searchView;
     private ChipGroup chipGroupFilter;
     private RecyclerView recyclerView;
-    private PengaduanPublikAdapter adapter;
+    private PengaduanPublikAdapter adapter; // Menggunakan adapter yang sama dengan Beranda
     private ProgressBar progressBar;
     private TextView textViewPesan;
 
+    // --- Deklarasi Properti Lain ---
     private String currentKeyword = "";
     private String currentStatusFilter = ""; // "" berarti semua status
     private final Handler searchHandler = new Handler(Looper.getMainLooper());
@@ -69,6 +75,9 @@ public class CariFragment extends Fragment {
         observeViewModel();
     }
 
+    /**
+     * Menginisialisasi semua referensi ke komponen view dari layout XML dan melakukan setup awal.
+     */
     private void inisialisasiView(View view) {
         Toolbar toolbar = view.findViewById(R.id.toolbarCari);
         ((AppCompatActivity) requireActivity()).setSupportActionBar(toolbar);
@@ -79,28 +88,13 @@ public class CariFragment extends Fragment {
         progressBar = view.findViewById(R.id.progressBarCari);
         textViewPesan = view.findViewById(R.id.textViewPesanCari);
 
-        // Setup SearchView hint - metode yang lebih reliable
-        setupSearchViewHint();
-
-        // Mengubah ukuran font di dalam EditText SearchView
-        @SuppressLint("DiscouragedApi") int searchEditTextId = getResources().getIdentifier("androidx.appcompat:id/search_src_text", null, null);
-        if (searchEditTextId != 0) {
-            EditText searchEditText = searchView.findViewById(searchEditTextId);
-            if (searchEditText != null) {
-                searchEditText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
-            }
-        }
-
-        // Memaksa SearchView untuk terbuka penuh
-        searchView.setIconified(false);
-    }
-
-    // Method untuk setup hint
-    private void setupSearchViewHint() {
-        // Metode 1: Set hint secara programmatik
         searchView.setQueryHint("Cari berdasarkan kategori, deskripsi...");
+        searchView.setIconified(false); // Otomatis membuka keyboard saat fragment tampil
     }
 
+    /**
+     * Menginisialisasi ViewModel menggunakan ViewModelFactory untuk menyuntikkan dependensi.
+     */
     private void setupViewModel() {
         OperatorRepository repository = new OperatorRepositoryImpl(requireContext());
         SearchPengaduanUseCase useCase = new SearchPengaduanUseCase(repository);
@@ -108,34 +102,42 @@ public class CariFragment extends Fragment {
         viewModel = new ViewModelProvider(this, factory).get(CariViewModel.class);
     }
 
+    /**
+     * Mengatur RecyclerView, termasuk adapter dan layout manager.
+     */
     private void setupRecyclerView() {
         adapter = new PengaduanPublikAdapter(new ArrayList<>(), requireContext());
         recyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
         recyclerView.setAdapter(adapter);
     }
 
+    /**
+     * Mengatur semua listener untuk interaksi pengguna, termasuk input pencarian,
+     * perubahan filter, dan klik pada item hasil pencarian.
+     */
     private void setupListeners() {
-        // Listener untuk SearchView dengan delay (debounce)
+        // Listener untuk SearchView dengan mekanisme debounce (jeda)
         searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+            /** Dipanggil saat pengguna menekan tombol submit (enter) pada keyboard. */
             @Override
             public boolean onQueryTextSubmit(String query) {
-                // Hentikan handler jika ada, lalu langsung cari
-                searchHandler.removeCallbacks(searchRunnable);
-                performSearch(query);
+                searchHandler.removeCallbacks(searchRunnable); // Hentikan pencarian terjadwal
+                performSearch(query); // Langsung lakukan pencarian
                 return true;
             }
 
+            /** Dipanggil setiap kali teks di dalam SearchView berubah. */
             @Override
             public boolean onQueryTextChange(String newText) {
-                // Hentikan pencarian sebelumnya, jadwalkan yang baru dalam 500ms
-                searchHandler.removeCallbacks(searchRunnable);
+                searchHandler.removeCallbacks(searchRunnable); // Batalkan pencarian sebelumnya
+                // Jadwalkan pencarian baru setelah jeda 500ms untuk mencegah request berlebihan
                 searchRunnable = () -> performSearch(newText);
-                searchHandler.postDelayed(searchRunnable, 500); // Delay 500ms
+                searchHandler.postDelayed(searchRunnable, 500);
                 return true;
             }
         });
 
-        // Listener untuk filter ChipGroup
+        // Listener untuk filter status
         chipGroupFilter.setOnCheckedChangeListener((group, checkedId) -> {
             if (checkedId == R.id.chipFilterMenunggu) {
                 currentStatusFilter = "menunggu";
@@ -149,6 +151,7 @@ public class CariFragment extends Fragment {
             performSearch(currentKeyword); // Lakukan pencarian ulang dengan filter baru
         });
 
+        // Listener untuk klik item di hasil pencarian
         adapter.setOnItemClickListener(item -> {
             Intent intent = new Intent(requireActivity(), DetailPengaduanOperatorActivity.class);
             intent.putExtra(DetailPengaduanOperatorActivity.EXTRA_ID_PENGADUAN, item.getIdPengaduan());
@@ -156,12 +159,20 @@ public class CariFragment extends Fragment {
         });
     }
 
+    /**
+     * Memulai proses pencarian data dengan memanggil metode di ViewModel.
+     * @param keyword Kata kunci yang dimasukkan oleh pengguna.
+     */
     private void performSearch(String keyword) {
         currentKeyword = keyword;
         Log.d(TAG, "Mencari dengan keyword: '" + currentKeyword + "', status: '" + currentStatusFilter + "'");
         viewModel.cariPengaduan(currentKeyword, currentStatusFilter);
     }
 
+    /**
+     * Mengamati LiveData dari ViewModel untuk memperbarui UI secara reaktif
+     * terhadap perubahan hasil pencarian, status loading, atau pesan error.
+     */
     @SuppressLint("SetTextI18n")
     private void observeViewModel() {
         viewModel.isLoading.observe(getViewLifecycleOwner(), isLoading -> {
@@ -177,7 +188,7 @@ public class CariFragment extends Fragment {
                 adapter.updateData(list);
             } else {
                 recyclerView.setVisibility(View.GONE);
-                // Tampilkan pesan hanya jika tidak sedang loading
+                // Hanya tampilkan pesan "kosong" jika proses loading sudah selesai
                 if (viewModel.isLoading.getValue() != null && !viewModel.isLoading.getValue()) {
                     textViewPesan.setVisibility(View.VISIBLE);
                     textViewPesan.setText("Tidak ada hasil yang ditemukan.");

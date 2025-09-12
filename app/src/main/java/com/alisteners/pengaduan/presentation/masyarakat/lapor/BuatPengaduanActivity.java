@@ -8,7 +8,9 @@ import androidx.exifinterface.media.ExifInterface;
 import androidx.lifecycle.ViewModelProvider;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
@@ -53,18 +55,30 @@ import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+/**
+ * Activity yang bertanggung jawab untuk menangani pembuatan pengaduan baru oleh pengguna.
+ * Alur kerja utama meliputi:
+ * 1. Menampilkan form input (foto, lokasi, deskripsi).
+ * 2. Mengambil lokasi GPS pengguna secara otomatis.
+ * 3. Memvalidasi semua input dari pengguna.
+ * 4. Memulai proses kompresi gambar di background thread.
+ * 5. Mengirim data yang telah diproses ke ViewModel untuk diteruskan ke server.
+ */
 public class BuatPengaduanActivity extends AppCompatActivity {
 
     private static final String TAG = "BuatPengaduanActivity";
     private static final int REQUEST_LOCATION_PERMISSION = 102;
     private final CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
 
+    // --- Deklarasi Komponen UI ---
     private ImageView imageViewFotoPengaduan;
     private EditText editTextLokasiOtomatis, editTextDetailLokasiManual, editTextDeskripsi;
     private Spinner spinnerKategori;
     private CheckBox checkboxPernyataan;
     private Button buttonKirimPengaduan;
     private ProgressBar progressBarBuatPengaduan;
+
+    // --- Deklarasi Properti Lain ---
     private Bitmap bitmapFotoPengaduan;
     private FusedLocationProviderClient fusedLocationClient;
     private double latitude = 0.0, longitude = 0.0;
@@ -79,16 +93,30 @@ public class BuatPengaduanActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_buat_pengaduan);
 
+        // Inisialisasi komponen-komponen penting
         executorService = Executors.newSingleThreadExecutor();
         mainThreadHandler = new Handler(Looper.getMainLooper());
         imageProcessingManager = new ImageProcessingManager(this);
 
+        // Inisialisasi ViewModel
         PengaduanRepository pengaduanRepository = new PengaduanRepositoryImpl(getApplicationContext());
         KirimPengaduanUseCase kirimPengaduanUseCase = new KirimPengaduanUseCase(pengaduanRepository);
         BuatPengaduanViewModelFactory factory = new BuatPengaduanViewModelFactory(kirimPengaduanUseCase);
         viewModel = new ViewModelProvider(this, factory).get(BuatPengaduanViewModel.class);
 
-        // Inisialisasi semua view
+        inisialisasiView();
+        setupSpinnerKategori();
+        setupListeners();
+        observeViewModel();
+
+        // Memproses data gambar dan lokasi yang diterima dari Activity sebelumnya
+        handleIncomingPhotoAndLocation();
+    }
+
+    /**
+     * Menginisialisasi semua referensi ke komponen view dari layout XML.
+     */
+    private void inisialisasiView() {
         ImageButton buttonKembali = findViewById(R.id.buttonKembali);
         imageViewFotoPengaduan = findViewById(R.id.imageViewFotoPengaduan);
         editTextLokasiOtomatis = findViewById(R.id.editTextLokasiOtomatis);
@@ -100,11 +128,17 @@ public class BuatPengaduanActivity extends AppCompatActivity {
         buttonKirimPengaduan = findViewById(R.id.buttonKirimPengaduan);
         progressBarBuatPengaduan = findViewById(R.id.progressBarBuatPengaduan);
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+    }
 
-        setupSpinnerKategori();
-        handleIncomingPhotoAndLocation();
+    /**
+     * Mengatur semua listener untuk interaksi pengguna pada Activity ini.
+     */
+    private void setupListeners() {
+        // Listener untuk tombol kembali
+        findViewById(R.id.buttonKembali).setOnClickListener(v -> finish());
 
-        buttonKembali.setOnClickListener(v -> finish());
+        // Listener untuk tombol refresh lokasi
+        ImageButton buttonRefreshLokasi = findViewById(R.id.buttonRefreshLokasi);
         if (buttonRefreshLokasi != null) {
             buttonRefreshLokasi.setOnClickListener(v -> {
                 Toast.makeText(BuatPengaduanActivity.this, getString(R.string.memperbarui_lokasi), Toast.LENGTH_SHORT).show();
@@ -112,10 +146,15 @@ public class BuatPengaduanActivity extends AppCompatActivity {
                 requestLocationPermissionAndGetLocation();
             });
         }
+
+        // Listener untuk tombol kirim pengaduan
         buttonKirimPengaduan.setOnClickListener(v -> attemptKirimPengaduan());
-        observeViewModel();
     }
 
+    /**
+     * Mengamati LiveData dari ViewModel untuk memperbarui UI secara reaktif
+     * terhadap perubahan state (loading, sukses, error).
+     */
     private void observeViewModel() {
         viewModel.isLoading.observe(this, isLoading -> {
             if (isLoading != null) {
@@ -128,7 +167,7 @@ public class BuatPengaduanActivity extends AppCompatActivity {
             if (message != null && !message.isEmpty()) {
                 Toast.makeText(BuatPengaduanActivity.this, message, Toast.LENGTH_LONG).show();
                 viewModel.clearPesanSukses();
-                setResult(RESULT_OK);
+                setResult(RESULT_OK); // Mengirim sinyal sukses ke Activity sebelumnya
                 finish();
             }
         });
@@ -141,13 +180,18 @@ public class BuatPengaduanActivity extends AppCompatActivity {
         });
     }
 
+    /**
+     * Memproses data (URI gambar dan ukuran file) yang dikirim dari Activity sebelumnya,
+     * lalu memulai permintaan lokasi.
+     */
     private void handleIncomingPhotoAndLocation() {
-        if (getIntent() != null) {
-            ukuranFileAsliBytes = getIntent().getLongExtra("ORIGINAL_FILE_SIZE", 0);
+        Intent intent = getIntent();
+        if (intent != null) {
+            ukuranFileAsliBytes = intent.getLongExtra("ORIGINAL_FILE_SIZE", 0);
             Log.d(TAG, "Ukuran File Asli diterima: " + ukuranFileAsliBytes + " bytes");
 
-            if (getIntent().hasExtra("PHOTO_URI")) {
-                Uri photoUri = Uri.parse(getIntent().getStringExtra("PHOTO_URI"));
+            if (intent.hasExtra("PHOTO_URI")) {
+                Uri photoUri = Uri.parse(intent.getStringExtra("PHOTO_URI"));
                 try {
                     Bitmap originalBitmap = MediaStore.Images.Media.getBitmap(this.getContentResolver(), photoUri);
                     if (originalBitmap != null) {
@@ -163,40 +207,16 @@ public class BuatPengaduanActivity extends AppCompatActivity {
         requestLocationPermissionAndGetLocation();
     }
 
+    /**
+     * Titik awal saat tombol "Kirim Pengaduan" di-klik.
+     * Metode ini melakukan validasi input UI dan sesi pengguna sebelum
+     * memulai proses pengiriman yang berat.
+     */
     private void attemptKirimPengaduan() {
-        // 1. Sembunyikan Keyboard
-        InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-        View currentFocus = getCurrentFocus();
-        if (currentFocus != null) {
-            imm.hideSoftInputFromWindow(currentFocus.getWindowToken(), 0);
-        }
+        hideKeyboard();
 
-        // 2. Hapus Fokus dari EditText
-        editTextDeskripsi.clearFocus();
-        editTextDetailLokasiManual.clearFocus();
-
-        // Validasi input pengguna sebelum mengirim
-        if (bitmapFotoPengaduan == null) {
-            Toast.makeText(this, getString(R.string.foto_bukti_wajib), Toast.LENGTH_SHORT).show();
-            return;
-        }
-        final String lokasiOtomatisValue = editTextLokasiOtomatis.getText().toString().trim();
-        final String detailLokasiManualValue = editTextDetailLokasiManual.getText().toString().trim();
-        final String kategoriValue;
-        if (spinnerKategori.getSelectedItem() != null && spinnerKategori.getSelectedItemPosition() > 0) {
-            kategoriValue = spinnerKategori.getSelectedItem().toString();
-        } else {
-            Toast.makeText(this, getString(R.string.kategori_harus_dipilih), Toast.LENGTH_SHORT).show();
-            return;
-        }
-        final String deskripsiValue = editTextDeskripsi.getText().toString().trim();
-        if (deskripsiValue.isEmpty()) {
-            editTextDeskripsi.setError(getString(R.string.error_deskripsi_kosong));
-            editTextDeskripsi.requestFocus();
-            return;
-        }
-        if (!checkboxPernyataan.isChecked()) {
-            Toast.makeText(this, getString(R.string.error_pernyataan_belum_disetujui), Toast.LENGTH_LONG).show();
+        // Validasi input form
+        if (!validateInputFields()) {
             return;
         }
 
@@ -208,20 +228,25 @@ public class BuatPengaduanActivity extends AppCompatActivity {
             return;
         }
 
-        // Tampilkan loading dan nonaktifkan tombol
+        // Menyiapkan UI untuk proses loading
         progressBarBuatPengaduan.setVisibility(View.VISIBLE);
         buttonKirimPengaduan.setEnabled(false);
 
-        // Mulai proses di background thread
+        // Mengambil nilai final dari UI sebelum masuk ke background thread
+        final String lokasiOtomatisValue = editTextLokasiOtomatis.getText().toString().trim();
+        final String detailLokasiManualValue = editTextDetailLokasiManual.getText().toString().trim();
+        final String kategoriValue = spinnerKategori.getSelectedItem().toString();
+        final String deskripsiValue = editTextDeskripsi.getText().toString().trim();
+
+        // Memulai proses di background thread
         prosesDanKirimPengaduan(lokasiOtomatisValue, detailLokasiManualValue, kategoriValue, deskripsiValue, idUser);
     }
 
+    /**
+     * Mengeksekusi proses kompresi gambar dan pengiriman data di background thread
+     * untuk mencegah pemblokiran UI thread (ANR).
+     */
     private void prosesDanKirimPengaduan(String lokasiOtomatis, String detailLokasi, String kategori, String deskripsi, int idUser) {
-        final Bitmap bitmapUntukDiolah = bitmapFotoPengaduan;
-        final double currentLatitude = latitude;
-        final double currentLongitude = longitude;
-        final boolean isChecked = checkboxPernyataan.isChecked();
-
         executorService.execute(() -> {
             try {
                 // Gabungkan lokasi otomatis dan manual
@@ -231,12 +256,12 @@ public class BuatPengaduanActivity extends AppCompatActivity {
                 }
 
                 // Buat objek data awal
-                PengaduanData dataAwal = new PengaduanData(idUser, lokasiFinal, kategori, deskripsi, false, currentLatitude, currentLongitude, isChecked);
+                PengaduanData dataAwal = new PengaduanData(idUser, lokasiFinal, kategori, deskripsi, false, latitude, longitude, checkboxPernyataan.isChecked());
 
                 // Panggil ImageProcessingManager untuk melakukan semua pekerjaan berat
-                ImageProcessingManager.ProcessingResult result = imageProcessingManager.processAndCompressImage(bitmapUntukDiolah, ukuranFileAsliBytes, dataAwal);
+                ImageProcessingManager.ProcessingResult result = imageProcessingManager.processAndCompressImage(bitmapFotoPengaduan, ukuranFileAsliBytes, dataAwal);
 
-                // Kirim hasil ke ViewModel di Main Thread
+                // Kirim hasil kembali ke Main Thread untuk diperbarui di ViewModel
                 mainThreadHandler.post(() -> viewModel.prosesKirimPengaduan(result.pengaduanData(), result.fileDataUntukUpload(), result.fileThumbnail()));
 
             } catch (Exception e) {
@@ -250,6 +275,9 @@ public class BuatPengaduanActivity extends AppCompatActivity {
         });
     }
 
+    /**
+     * Membersihkan resource seperti ExecutorService saat Activity dihancurkan.
+     */
     @Override
     protected void onDestroy() {
         super.onDestroy();
@@ -258,13 +286,12 @@ public class BuatPengaduanActivity extends AppCompatActivity {
         }
     }
 
-    private void setDefaultImageAndMessage(String message) {
-        if (imageViewFotoPengaduan != null) {
-            imageViewFotoPengaduan.setImageResource(R.drawable.ic_image_placeholder);
-        }
-        Toast.makeText(this, message, Toast.LENGTH_LONG).show();
-    }
+    // --- Metode-Metode Helper ---
 
+    /**
+     * Memeriksa izin lokasi. Jika sudah diberikan, langsung ambil lokasi.
+     * Jika belum, minta izin kepada pengguna.
+     */
     private void requestLocationPermissionAndGetLocation() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
             getCurrentLocation();
@@ -273,6 +300,9 @@ public class BuatPengaduanActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Callback yang dipanggil setelah pengguna merespons dialog permintaan izin.
+     */
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
@@ -285,10 +315,11 @@ public class BuatPengaduanActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Mengambil lokasi terkini pengguna menggunakan FusedLocationProviderClient.
+     */
+    @SuppressLint("MissingPermission")
     private void getCurrentLocation() {
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            return;
-        }
         fusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, cancellationTokenSource.getToken())
                 .addOnSuccessListener(this, location -> {
                     if (location != null) {
@@ -302,6 +333,10 @@ public class BuatPengaduanActivity extends AppCompatActivity {
                 .addOnFailureListener(this, e -> Log.e(TAG, "Gagal mendapatkan lokasi", e));
     }
 
+    /**
+     * Mengonversi koordinat (latitude, longitude) menjadi alamat yang dapat dibaca manusia
+     * menggunakan Geocoder.
+     */
     private void getAddressFromLatLng(double lat, double lon) {
         if (!Geocoder.isPresent()) {
             editTextLokasiOtomatis.setText(String.format(Locale.US, "Lat: %.5f, Lon: %.5f", lat, lon));
@@ -311,8 +346,7 @@ public class BuatPengaduanActivity extends AppCompatActivity {
         try {
             List<Address> addresses = geocoder.getFromLocation(lat, lon, 1);
             if (addresses != null && !addresses.isEmpty()) {
-                String alamatLengkap = formatAddress(addresses);
-                editTextLokasiOtomatis.setText(alamatLengkap);
+                editTextLokasiOtomatis.setText(formatAddress(addresses));
             } else {
                 editTextLokasiOtomatis.setText(String.format(Locale.US, "Lat: %.5f, Lon: %.5f", lat, lon));
             }
@@ -321,12 +355,18 @@ public class BuatPengaduanActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Memformat objek Address menjadi satu baris string alamat.
+     */
     @NonNull
     private static String formatAddress(List<Address> addresses) {
         Address address = addresses.get(0);
         return address.getAddressLine(0) != null ? address.getAddressLine(0) : "";
     }
 
+    /**
+     * Mengatur data dan adapter untuk Spinner kategori.
+     */
     private void setupSpinnerKategori() {
         ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(this,
                 R.array.kategori_pengaduan_array, android.R.layout.simple_spinner_item);
@@ -334,6 +374,11 @@ public class BuatPengaduanActivity extends AppCompatActivity {
         spinnerKategori.setAdapter(adapter);
     }
 
+    /**
+     * Membaca metadata EXIF dari gambar untuk mendapatkan orientasi rotasinya.
+     * @param imageUri URI dari gambar.
+     * @return Sudut rotasi dalam derajat (0, 90, 180, 270).
+     */
     private int getRotationFromExif(Uri imageUri) {
         try (InputStream inputStream = getContentResolver().openInputStream(imageUri)) {
             if (inputStream == null) return 0;
@@ -350,10 +395,64 @@ public class BuatPengaduanActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Memutar (rotate) objek Bitmap sesuai dengan sudut yang ditentukan.
+     * @param source Bitmap asli.
+     * @param angle Sudut rotasi.
+     * @return Bitmap baru yang sudah dirotasi.
+     */
     public static Bitmap rotateBitmap(Bitmap source, float angle) {
         if (source == null || angle == 0) return source;
         Matrix matrix = new Matrix();
         matrix.postRotate(angle);
         return Bitmap.createBitmap(source, 0, 0, source.getWidth(), source.getHeight(), matrix, true);
+    }
+
+    /**
+     * Menyembunyikan soft keyboard dari layar.
+     */
+    private void hideKeyboard() {
+        InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+        View currentFocus = getCurrentFocus();
+        if (currentFocus != null) {
+            imm.hideSoftInputFromWindow(currentFocus.getWindowToken(), 0);
+        }
+        if (editTextDeskripsi != null) editTextDeskripsi.clearFocus();
+        if (editTextDetailLokasiManual != null) editTextDetailLokasiManual.clearFocus();
+    }
+
+    /**
+     * Menampilkan gambar placeholder dan pesan Toast jika terjadi error.
+     */
+    private void setDefaultImageAndMessage(String message) {
+        if (imageViewFotoPengaduan != null) {
+            imageViewFotoPengaduan.setImageResource(R.drawable.ic_image_placeholder);
+        }
+        Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+    }
+
+    /**
+     * Melakukan validasi pada semua field input di form.
+     * @return true jika semua input valid, false jika ada yang tidak valid.
+     */
+    private boolean validateInputFields() {
+        if (bitmapFotoPengaduan == null) {
+            Toast.makeText(this, getString(R.string.foto_bukti_wajib), Toast.LENGTH_SHORT).show();
+            return false;
+        }
+        if (spinnerKategori.getSelectedItem() == null || spinnerKategori.getSelectedItemPosition() <= 0) {
+            Toast.makeText(this, getString(R.string.kategori_harus_dipilih), Toast.LENGTH_SHORT).show();
+            return false;
+        }
+        if (editTextDeskripsi.getText().toString().trim().isEmpty()) {
+            editTextDeskripsi.setError(getString(R.string.error_deskripsi_kosong));
+            editTextDeskripsi.requestFocus();
+            return false;
+        }
+        if (!checkboxPernyataan.isChecked()) {
+            Toast.makeText(this, getString(R.string.error_pernyataan_belum_disetujui), Toast.LENGTH_LONG).show();
+            return false;
+        }
+        return true;
     }
 }

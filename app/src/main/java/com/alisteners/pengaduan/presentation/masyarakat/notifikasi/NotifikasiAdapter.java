@@ -23,25 +23,49 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
+/**
+ * Adapter untuk {@link RecyclerView} yang menampilkan daftar notifikasi pengguna.
+ * Kelas ini bertanggung jawab untuk mengambil data dari list {@link Notifikasi}
+ * dan menampilkannya ke dalam layout item_notifikasi.xml.
+ */
 public class NotifikasiAdapter extends RecyclerView.Adapter<NotifikasiAdapter.ViewHolder> {
 
     private final List<Notifikasi> notifikasiList;
     private final Context context;
     private OnItemClickListener listener;
 
+    /**
+     * Interface untuk menangani event klik pada item di RecyclerView.
+     */
     public interface OnItemClickListener {
+        /**
+         * Dipanggil ketika sebuah item notifikasi di-klik.
+         * @param notifikasi Objek {@link Notifikasi} yang di-klik.
+         */
         void onItemClick(Notifikasi notifikasi);
     }
 
+    /**
+     * Mendaftarkan listener untuk event klik item.
+     * @param listener Implementasi dari {@link OnItemClickListener}.
+     */
     public void setOnItemClickListener(OnItemClickListener listener) {
         this.listener = listener;
     }
 
+    /**
+     * Konstruktor untuk adapter.
+     * @param context Context dari Fragment atau Activity.
+     * @param notifikasiList List awal dari data notifikasi.
+     */
     public NotifikasiAdapter(Context context, List<Notifikasi> notifikasiList) {
         this.context = context;
         this.notifikasiList = notifikasiList;
     }
 
+    /**
+     * Dipanggil oleh RecyclerView untuk membuat ViewHolder baru.
+     */
     @NonNull
     @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
@@ -49,17 +73,28 @@ public class NotifikasiAdapter extends RecyclerView.Adapter<NotifikasiAdapter.Vi
         return new ViewHolder(view);
     }
 
+    /**
+     * Dipanggil oleh RecyclerView untuk menampilkan data pada posisi tertentu.
+     */
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         Notifikasi notifikasi = notifikasiList.get(position);
         holder.bind(notifikasi);
     }
 
+    /**
+     * Mengembalikan jumlah total item dalam dataset.
+     */
     @Override
     public int getItemCount() {
         return notifikasiList.size();
     }
 
+    /**
+     * ViewHolder yang merepresentasikan satu item notifikasi dalam RecyclerView.
+     * Kelas ini menyimpan referensi ke view-view di dalam layout item dan
+     * berisi logika untuk mengikat data ke view tersebut.
+     */
     public class ViewHolder extends RecyclerView.ViewHolder {
         TextView textViewJudulLaporan, textViewStatusNotifikasi, textViewTanggalNotifikasi;
         MaterialCardView cardView;
@@ -79,13 +114,16 @@ public class NotifikasiAdapter extends RecyclerView.Adapter<NotifikasiAdapter.Vi
             });
         }
 
+        /**
+         * Mengikat data dari objek notifikasi ke komponen UI di dalam ViewHolder.
+         * Juga mengatur style tampilan (tebal/normal) berdasarkan status 'sudahDilihat'.
+         * @param notifikasi Objek {@link Notifikasi} yang berisi data.
+         */
         @SuppressLint("SetTextI18n")
         void bind(final Notifikasi notifikasi) {
-            // 1. Gunakan getter yang BENAR: getPesan()
             textViewJudulLaporan.setText("Pembaruan Status Pengaduan"); // Judul generik
             textViewStatusNotifikasi.setText(notifikasi.getPesan());
 
-            // 2. Gunakan getter yang BENAR: getTimestamp() dan periksa null
             String tanggal = notifikasi.getTimestamp();
             if (tanggal != null && !tanggal.isEmpty()) {
                 textViewTanggalNotifikasi.setText(formatTanggal(tanggal));
@@ -93,11 +131,11 @@ public class NotifikasiAdapter extends RecyclerView.Adapter<NotifikasiAdapter.Vi
                 textViewTanggalNotifikasi.setText("Tanggal tidak tersedia");
             }
 
-            // 3. Atur tampilan berdasarkan sudah dilihat atau belum (SUDAH DIPERBAIKI)
+            // Mengatur tampilan (style teks dan warna latar) berdasarkan status 'sudahDilihat'.
             if (notifikasi.isSudahDilihat()) {
                 textViewJudulLaporan.setTypeface(null, Typeface.NORMAL);
                 textViewStatusNotifikasi.setTypeface(null, Typeface.NORMAL);
-                cardView.setCardBackgroundColor(ContextCompat.getColor(context, android.R.color.white)); // Gunakan transparan atau warna putih
+                cardView.setCardBackgroundColor(ContextCompat.getColor(context, android.R.color.white));
             } else {
                 textViewJudulLaporan.setTypeface(null, Typeface.BOLD);
                 textViewStatusNotifikasi.setTypeface(null, Typeface.BOLD);
@@ -106,6 +144,11 @@ public class NotifikasiAdapter extends RecyclerView.Adapter<NotifikasiAdapter.Vi
         }
     }
 
+    /**
+     * Memformat string tanggal dari format "yyyy-MM-dd HH:mm:ss" menjadi "dd MMM yyyy, HH:mm".
+     * @param tanggalMySQL String tanggal dari server.
+     * @return String tanggal yang sudah diformat.
+     */
     private String formatTanggal(String tanggalMySQL) {
         if (tanggalMySQL == null) return "";
         SimpleDateFormat inputFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());

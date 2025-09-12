@@ -30,6 +30,11 @@ import com.google.android.material.chip.ChipGroup;
 
 import java.util.ArrayList;
 
+/**
+ * Fragment yang bertanggung jawab untuk menampilkan halaman Beranda (Home).
+ * Halaman ini menampilkan daftar pengaduan publik yang dapat difilter berdasarkan status.
+ * Fragment ini mengimplementasikan arsitektur MVVM dengan berkomunikasi melalui {@link BerandaViewModel}.
+ */
 public class BerandaFragment extends Fragment {
 
     private static final String TAG = "BerandaFragment";
@@ -39,23 +44,32 @@ public class BerandaFragment extends Fragment {
     private PengaduanPublikAdapter adapter;
     private SwipeRefreshLayout swipeRefreshLayout;
     private ProgressBar progressBar;
-    private LinearLayout layoutPesan;
+    private LinearLayout layoutPesan; // Layout untuk menampilkan pesan (error/kosong)
     private TextView textViewPesanMain;
     private ImageView imageViewPesanIcon;
     private Button buttonCobaLagi;
     private TextView textViewJumlahLaporan;
-
-    // Variabel untuk Filter
     private ChipGroup chipGroupFilter;
-    private String filterStatusAktif = "semua";
+    private String filterStatusAktif = "semua"; // Status filter default
 
+    /**
+     * Konstruktor default yang diperlukan untuk Fragment.
+     */
     public BerandaFragment() { /* Diperlukan konstruktor kosong */ }
 
+    /**
+     * Dipanggil untuk membuat dan meng-inflate layout view dari fragment.
+     */
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         return inflater.inflate(R.layout.fragment_beranda, container, false);
     }
 
+    /**
+     * Dipanggil setelah view dari fragment selesai dibuat.
+     * Metode ini adalah tempat utama untuk inisialisasi view, ViewModel, listener,
+     * dan memuat data awal.
+     */
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
@@ -66,32 +80,25 @@ public class BerandaFragment extends Fragment {
         setupViewModel();
         setupListeners();
         observeViewModel();
+        setupFragmentResultListener();
 
-        getParentFragmentManager().setFragmentResultListener("pengaduan_baru", this, (requestKey, bundle) -> {
-            // Kode ini akan berjalan OTOMATIS setiap kali MainActivity mengirim sinyal.
-            Log.d(TAG, "Menerima sinyal 'pengaduan_baru', memuat ulang data.");
-
-            // Untuk memastikan UI konsisten dan memicu pembaruan,
-            // pilih Chip "Semua" secara programatis.
-            if (chipGroupFilter != null) {
-                chipGroupFilter.check(R.id.chipSemua);
-            }
-
-            // Memanggil metode loadData akan memicu pembaruan dari ViewModel
-            // set 'true' agar pengguna melihat ProgressBar dan tahu ada proses.
-            loadData(true);
-        });
-
+        // Memuat data hanya saat fragment pertama kali dibuat, bukan saat re-creation.
         if (savedInstanceState == null) {
             loadData(true);
         }
     }
 
+    /**
+     * Mengatur Toolbar sebagai ActionBar untuk Activity induk.
+     */
     private void setupToolbar(View view) {
         Toolbar toolbar = view.findViewById(R.id.toolbarMain);
         ((AppCompatActivity) requireActivity()).setSupportActionBar(toolbar);
     }
 
+    /**
+     * Menginisialisasi semua komponen view dari layout.
+     */
     private void inisialisasiView(View view) {
         recyclerView = view.findViewById(R.id.recyclerViewPublik);
         swipeRefreshLayout = view.findViewById(R.id.swipeRefreshMain);
@@ -104,12 +111,18 @@ public class BerandaFragment extends Fragment {
         chipGroupFilter = view.findViewById(R.id.chipGroupFilter);
     }
 
+    /**
+     * Mengatur RecyclerView, termasuk adapter dan layout manager.
+     */
     private void setupRecyclerView() {
         adapter = new PengaduanPublikAdapter(new ArrayList<>(), requireContext());
         recyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
         recyclerView.setAdapter(adapter);
     }
 
+    /**
+     * Menginisialisasi ViewModel menggunakan ViewModelFactory untuk menyuntikkan dependensi (UseCase).
+     */
     private void setupViewModel() {
         PengaduanRepository repository = new PengaduanRepositoryImpl(requireActivity().getApplicationContext());
         GetPengaduanPublikUseCase useCase = new GetPengaduanPublikUseCase(repository);
@@ -117,6 +130,10 @@ public class BerandaFragment extends Fragment {
         viewModel = new ViewModelProvider(this, factory).get(BerandaViewModel.class);
     }
 
+    /**
+     * Mengatur semua listener untuk interaksi pengguna, seperti swipe-to-refresh,
+     * klik item, dan perubahan filter.
+     */
     private void setupListeners() {
         swipeRefreshLayout.setOnRefreshListener(() -> loadData(false));
 
@@ -137,26 +154,36 @@ public class BerandaFragment extends Fragment {
                 filterStatusAktif = "selesai";
             }
             Log.d(TAG, "Filter diubah menjadi: " + filterStatusAktif);
-            loadData(true);
+            loadData(true); // Muat ulang data dengan filter baru dan tampilkan loading.
         });
 
         buttonCobaLagi.setOnClickListener(v -> loadData(true));
     }
 
+    /**
+     * Memulai proses pemuatan data dari ViewModel.
+     * @param showLoading Menentukan apakah ProgressBar awal harus ditampilkan.
+     * Bernilai false saat melakukan swipe-to-refresh.
+     */
     private void loadData(boolean showLoading) {
         viewModel.loadPengaduanPublik(filterStatusAktif, showLoading);
     }
 
+    /**
+     * Mengamati LiveData dari ViewModel untuk memperbarui UI secara reaktif
+     * ketika ada perubahan data, status loading, atau pesan error.
+     */
     private void observeViewModel() {
         viewModel.isLoading.observe(getViewLifecycleOwner(), isLoading -> {
             if (isLoading == null) return;
-            // Saat loading, sembunyikan semuanya kecuali progress bar
             if (isLoading && !swipeRefreshLayout.isRefreshing()) {
+                // Tampilkan progress bar utama jika sedang loading (bukan dari swipe refresh)
                 progressBar.setVisibility(View.VISIBLE);
                 recyclerView.setVisibility(View.GONE);
                 layoutPesan.setVisibility(View.GONE);
                 textViewJumlahLaporan.setVisibility(View.GONE);
             } else if (!isLoading) {
+                // Sembunyikan semua indikator loading setelah selesai.
                 progressBar.setVisibility(View.GONE);
                 swipeRefreshLayout.setRefreshing(false);
             }
@@ -167,7 +194,7 @@ public class BerandaFragment extends Fragment {
                 adapter.updateData(pengaduanList);
 
                 if (pengaduanList.isEmpty()) {
-                    // Jika KOSONG, tampilkan pesan dan sembunyikan yang lain
+                    // Kondisi jika tidak ada data yang sesuai dengan filter.
                     recyclerView.setVisibility(View.GONE);
                     textViewJumlahLaporan.setVisibility(View.GONE);
                     layoutPesan.setVisibility(View.VISIBLE);
@@ -175,21 +202,22 @@ public class BerandaFragment extends Fragment {
                     imageViewPesanIcon.setImageResource(R.drawable.ic_search_off);
                     buttonCobaLagi.setVisibility(View.GONE);
                 } else {
-                    // Jika ADA DATA, tampilkan daftar dan jumlahnya
+                    // Kondisi jika data berhasil dimuat.
                     recyclerView.setVisibility(View.VISIBLE);
                     layoutPesan.setVisibility(View.GONE);
-                    String jumlahText = "Menampilkan " + pengaduanList.size() + " Pengaduan Kerusakan Infrastruktur Desa";
+                    String jumlahText = "Menampilkan " + pengaduanList.size() + " Laporan";
                     textViewJumlahLaporan.setText(jumlahText);
-                    textViewJumlahLaporan.setVisibility(View.VISIBLE); // Ini kuncinya
+                    textViewJumlahLaporan.setVisibility(View.VISIBLE);
                 }
             }
         });
 
         viewModel.errorMessage.observe(getViewLifecycleOwner(), error -> {
             if (error != null && !error.isEmpty()) {
+                // Kondisi jika terjadi error saat mengambil data.
                 Log.e(TAG, "Observer: Menerima pesan error: " + error);
                 recyclerView.setVisibility(View.GONE);
-                textViewJumlahLaporan.setVisibility(View.GONE); // Sembunyikan juga saat error
+                textViewJumlahLaporan.setVisibility(View.GONE);
                 layoutPesan.setVisibility(View.VISIBLE);
                 textViewPesanMain.setText(error);
                 imageViewPesanIcon.setImageResource(R.drawable.ic_error_outline);
@@ -198,17 +226,17 @@ public class BerandaFragment extends Fragment {
         });
     }
 
-    public void muatUlangDataDariActivity() {
-        // Pengecekan null untuk mencegah crash
-        if (viewModel != null && swipeRefreshLayout != null) {
-            Log.d(TAG, "Menerima sinyal refresh dari Activity, memuat ulang data...");
-            // Tampilkan loading spinner seolah-olah pengguna yang melakukan refresh
-            swipeRefreshLayout.setRefreshing(true);
-            // Panggil metode yang BENAR dari ViewModel
-            // gunakan filterStatusAktif yang sudah ada untuk konsistensi
-            loadData(false); // Memanggil metode loadData akan memicu viewModel.loadPengaduanPublik
-        } else {
-            Log.w(TAG, "Gagal refresh otomatis: viewModel atau swipeRefreshLayout adalah null.");
-        }
+    /**
+     * Mengatur listener untuk menerima sinyal dari fragment lain (misalnya setelah membuat pengaduan baru).
+     * Ketika sinyal diterima, data di halaman ini akan dimuat ulang secara otomatis.
+     */
+    private void setupFragmentResultListener() {
+        getParentFragmentManager().setFragmentResultListener("pengaduan_baru", this, (requestKey, bundle) -> {
+            Log.d(TAG, "Menerima sinyal 'pengaduan_baru', memuat ulang data.");
+            if (chipGroupFilter != null) {
+                chipGroupFilter.check(R.id.chipSemua); // Kembali ke filter "Semua".
+            }
+            loadData(true);
+        });
     }
 }
