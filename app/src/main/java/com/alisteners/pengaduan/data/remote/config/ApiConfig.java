@@ -3,7 +3,7 @@ package com.alisteners.pengaduan.data.remote.config;
 public class ApiConfig {
 
     // GANTI DENGAN IP ADDRESS LOKAL
-    public static final String BASE_URL = "http://192.168.178.82/gampil-api/";
+    public static final String BASE_URL = "http://192.168.236.82/gampil-api/";
 
     // Endpoint untuk User
     public static final String URL_LOGIN = BASE_URL + "login.php";
