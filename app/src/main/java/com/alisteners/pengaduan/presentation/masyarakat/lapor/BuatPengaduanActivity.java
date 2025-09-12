@@ -8,6 +8,7 @@ import androidx.exifinterface.media.ExifInterface;
 import androidx.lifecycle.ViewModelProvider;
 
 import android.Manifest;
+import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
@@ -21,6 +22,7 @@ import android.os.Looper;
 import android.provider.MediaStore;
 import android.util.Log;
 import android.view.View;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.CheckBox;
@@ -162,6 +164,17 @@ public class BuatPengaduanActivity extends AppCompatActivity {
     }
 
     private void attemptKirimPengaduan() {
+        // 1. Sembunyikan Keyboard
+        InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+        View currentFocus = getCurrentFocus();
+        if (currentFocus != null) {
+            imm.hideSoftInputFromWindow(currentFocus.getWindowToken(), 0);
+        }
+
+        // 2. Hapus Fokus dari EditText
+        editTextDeskripsi.clearFocus();
+        editTextDetailLokasiManual.clearFocus();
+
         // Validasi input pengguna sebelum mengirim
         if (bitmapFotoPengaduan == null) {
             Toast.makeText(this, getString(R.string.foto_bukti_wajib), Toast.LENGTH_SHORT).show();
