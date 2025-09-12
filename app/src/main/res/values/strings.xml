@@ -107,11 +107,11 @@
     <string name="foto_bukti_tindak_lanjut">Foto Bukti Tindak Lanjut :</string>
     <string name="analisis_kompresi">Analisis Kompresi</string>
     <string name="ukuran_asli">Ukuran Sebelum Kompresi :</string>
-    <string name="ukuran_setelah_resize">Ukuran Resize/Ekstraksi JPEG :</string>
+    <string name="ukuran_setelah_resize">Ukuran di Memori (Bitmap) :</string>
     <string name="ukuran_grayscale">Ukuran Grayscale :</string>
     <string name="ukuran_hasil_rle">Ukuran Setelah Kompresi RLE :</string>
-    <string name="compression_ratio">Compression Ratio :</string>
-    <string name="space_saving">Space Saving :</string>
+    <string name="compression_ratio">Rasio Kompresi :</string>
+    <string name="space_saving">Penghematan Ruang :</string>
     <string name="foto_detail_operator">Foto Detail Operator</string>
     <string name="deskripsi_pengaduan">Deskripsi Pengaduan</string>
     <string name="lokasi_detail_op">Lokasi</string>

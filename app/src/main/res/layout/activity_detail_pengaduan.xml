@@ -433,7 +433,7 @@
                             android:orientation="horizontal"
                             android:layout_marginBottom="4dp">
                             <TextView
-                                android:text="Rasio (RLE vs Ukuran Resize/Ekstraksi)"
+                                android:text="Rasio (RLE vs Ukuran di Memori (Bitmap))"
                                 android:layout_width="0dp"
                                 android:layout_weight="1"
                                 android:layout_height="wrap_content"
