@@ -42,4 +42,26 @@ public class PengaduanData {
         this.waktuProsesGambarMs = waktuProsesGambarMs;
         this.isRleCompressed = isRleCompressed;
     }
+
+    public PengaduanData(int idUser, String lokasi, String kategori, String deskripsi, boolean isRleCompressed,
+                         double latitude, double longitude, boolean pernyataan) {
+        this.idUser = idUser;
+        this.lokasi = lokasi;
+        this.kategori = kategori;
+        this.deskripsi = deskripsi;
+        this.pernyataan = pernyataan;
+        this.latitude = latitude;
+        this.longitude = longitude;
+        this.isRleCompressed = isRleCompressed;
+        // Inisialisasi nilai default untuk properti lainnya
+        this.lebar = 0;
+        this.tinggi = 0;
+        this.ukuranBitmapAsli = 0;
+        this.ukuranBitmapSetelahResize = 0;
+        this.ukuranGrayscale = 0;
+        this.ukuranFileRLEByte = 0;
+        this.rasioKompresiRLE = 0.0;
+        this.rasioKompresiStandar = 0.0;
+        this.waktuProsesGambarMs = 0;
+    }
 }

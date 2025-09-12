@@ -11,7 +11,6 @@ import android.Manifest;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
-import android.graphics.Color;
 import android.graphics.Matrix;
 import android.location.Address;
 import android.location.Geocoder;
@@ -35,19 +34,16 @@ import android.widget.Toast;
 import com.alisteners.pengaduan.presentation.login.LoginActivity;
 import com.alisteners.pengaduan.R;
 import com.alisteners.pengaduan.data.repository.PengaduanRepositoryImpl;
-import com.alisteners.pengaduan.data.util.RLECompressor;
+import com.alisteners.pengaduan.data.util.ImageProcessingManager;
 import com.alisteners.pengaduan.domain.entity.PengaduanData;
 import com.alisteners.pengaduan.domain.repository.PengaduanRepository;
 import com.alisteners.pengaduan.domain.usecase.KirimPengaduanUseCase;
-import com.alisteners.pengaduan.util.MyPair;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.Priority;
 import com.google.android.gms.tasks.CancellationTokenSource;
 
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
@@ -74,6 +70,7 @@ public class BuatPengaduanActivity extends AppCompatActivity {
     private Handler mainThreadHandler;
     private BuatPengaduanViewModel viewModel;
     private long ukuranFileAsliBytes = 0;
+    private ImageProcessingManager imageProcessingManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -82,6 +79,7 @@ public class BuatPengaduanActivity extends AppCompatActivity {
 
         executorService = Executors.newSingleThreadExecutor();
         mainThreadHandler = new Handler(Looper.getMainLooper());
+        imageProcessingManager = new ImageProcessingManager(this);
 
         PengaduanRepository pengaduanRepository = new PengaduanRepositoryImpl(getApplicationContext());
         KirimPengaduanUseCase kirimPengaduanUseCase = new KirimPengaduanUseCase(pengaduanRepository);
@@ -209,88 +207,24 @@ public class BuatPengaduanActivity extends AppCompatActivity {
         final Bitmap bitmapUntukDiolah = bitmapFotoPengaduan;
         final double currentLatitude = latitude;
         final double currentLongitude = longitude;
+        final boolean isChecked = checkboxPernyataan.isChecked();
 
         executorService.execute(() -> {
             try {
-                // --- Mulai Proses Kompresi ---
-                long startTime = System.currentTimeMillis();
-                final int bitmapWidth = bitmapUntukDiolah.getWidth();
-                final int bitmapHeight = bitmapUntukDiolah.getHeight();
-                final int ukuranAsli = (int) ukuranFileAsliBytes;
-
-                // 1. Konversi ke Grayscale (di RAM)
-                int[] grayscalePixels = RLECompressor.convertBitmapToGrayscale(bitmapUntukDiolah);
-                if (grayscalePixels.length == 0) throw new IOException("Gagal konversi ke grayscale.");
-                final int ukuranByteDataGrayscale = grayscalePixels.length; // Ukuran data mentah grayscale (jumlah piksel = W x H)
-
-                // 2. Kuantisasi (di RAM)
-                int jumlahLevelQuantisasi = 8;
-                int[] quantizedPixels = RLECompressor.quantizeGrayscale(grayscalePixels, jumlahLevelQuantisasi);
-                if (quantizedPixels.length == 0) throw new IOException("Gagal melakukan kuantisasi.");
-
-                // 3. Kompresi RLE (di RAM)
-                final List<MyPair<Integer, Integer>> compressedDataRLE = RLECompressor.compressRLE(quantizedPixels);
-
-                // 4. Konversi hasil RLE ke format biner (byte[]) (di RAM)
-                final byte[] dataRLEBiner = RLECompressor.convertRleListToBinary(compressedDataRLE);
-                final int ukuranFileRLEByte = dataRLEBiner.length;
-
-                // 5. Logika Smart-Compression (Perbandingan Cepat di RAM)
-                boolean pakaiRle = ukuranFileRLEByte < ukuranByteDataGrayscale;
-                Log.d(TAG, "Background: Keputusan Smart-Compression -> " + (pakaiRle ? "Gunakan RLE" : "Gunakan Grayscale (JPG)"));
-
-                File fileDataUntukUpload;
-                int ukuranDataTerkirim;
-
-                // --- HANYA SATU KALI OPERASI TULIS FILE (I/O) KE DISK BERDASARKAN KEPUTUSAN ---
-                if (pakaiRle) {
-                    // Skenario A: RLE efisien, simpan data .rle
-                    fileDataUntukUpload = simpanByteKeFileSementara(dataRLEBiner);
-                    if (fileDataUntukUpload == null) throw new IOException("Gagal menyimpan data RLE biner ke file.");
-                    ukuranDataTerkirim = ukuranFileRLEByte;
-                } else {
-                    // Skenario B: RLE tidak efisien, simpan gambar grayscale sebagai fallback .jpg
-                    Bitmap bitmapGrayscale = Bitmap.createBitmap(bitmapWidth, bitmapHeight, Bitmap.Config.ARGB_8888);
-                    int[] colorPixelsGrayscale = new int[grayscalePixels.length];
-                    for (int i = 0; i < grayscalePixels.length; i++) {
-                        int gray = grayscalePixels[i];
-                        colorPixelsGrayscale[i] = Color.rgb(gray, gray, gray);
-                    }
-                    bitmapGrayscale.setPixels(colorPixelsGrayscale, 0, bitmapWidth, 0, 0, bitmapWidth, bitmapHeight);
-
-                    fileDataUntukUpload = simpanBitmapKeFileSementara(bitmapGrayscale, "fallback_grayscale.jpg", 85); // Kualitas 85%
-                    if (fileDataUntukUpload == null) throw new IOException("Gagal menyimpan fallback grayscale JPG ke file.");
-                    ukuranDataTerkirim = (int) fileDataUntukUpload.length();
+                // Gabungkan lokasi otomatis dan manual
+                String lokasiFinal = lokasiOtomatis;
+                if (!detailLokasi.isEmpty()) {
+                    lokasiFinal = lokasiOtomatis.isEmpty() ? detailLokasi : lokasiOtomatis + " (Patokan : " + detailLokasi + ")";
                 }
 
-                // Simpan thumbnail untuk ditampilkan di aplikasi (selalu dalam format JPG)
-                File fileThumbnail = simpanBitmapKeFileSementara(bitmapUntukDiolah, "thumbnail.jpg", 90);
-                if (fileThumbnail == null) throw new IOException("Gagal menyimpan file thumbnail.");
+                // Buat objek data awal
+                PengaduanData dataAwal = new PengaduanData(idUser, lokasiFinal, kategori, deskripsi, false, currentLatitude, currentLongitude, isChecked);
 
-                // Ambil ukuran Bitmap teoritis di RAM untuk tujuan analisis di Detail Pengaduan
-                final int ukuranBitmapSetelahResize = bitmapUntukDiolah.getByteCount();
+                // Panggil ImageProcessingManager untuk melakukan semua pekerjaan berat
+                ImageProcessingManager.ProcessingResult result = imageProcessingManager.processAndCompressImage(bitmapUntukDiolah, ukuranFileAsliBytes, dataAwal);
 
-                // Hitung metrik akhir
-                final double rasioHematRuang = (ukuranAsli > 0) ? (1.0 - ((double) ukuranDataTerkirim / (double) ukuranAsli)) * 100.0 : 0.0;
-                final double rasioKompresiStandar = (ukuranAsli > 0) ? ((double) ukuranDataTerkirim / (double) ukuranAsli) * 100.0 : 0.0;
-                long endTime = System.currentTimeMillis();
-                long durationMs = endTime - startTime;
-
-                // Kirim data ke ViewModel di Main Thread
-                mainThreadHandler.post(() -> {
-                    String lokasiFinal = lokasiOtomatis;
-                    if (!detailLokasi.isEmpty()) {
-                        lokasiFinal = lokasiOtomatis.isEmpty() ? detailLokasi : lokasiOtomatis + " (Patokan : " + detailLokasi + ")";
-                    }
-                    PengaduanData pengaduanData = new PengaduanData(
-                            idUser, lokasiFinal, kategori, deskripsi, pakaiRle,
-                            currentLatitude, currentLongitude,
-                            bitmapWidth, bitmapHeight, ukuranAsli, ukuranBitmapSetelahResize,
-                            ukuranByteDataGrayscale, ukuranDataTerkirim, rasioHematRuang,
-                            rasioKompresiStandar, durationMs, pakaiRle);
-
-                    viewModel.prosesKirimPengaduan(pengaduanData, fileDataUntukUpload, fileThumbnail);
-                });
+                // Kirim hasil ke ViewModel di Main Thread
+                mainThreadHandler.post(() -> viewModel.prosesKirimPengaduan(result.pengaduanData(), result.fileDataUntukUpload(), result.fileThumbnail()));
 
             } catch (Exception e) {
                 Log.e(TAG, "Gagal memproses pengaduan di background thread", e);
@@ -408,27 +342,5 @@ public class BuatPengaduanActivity extends AppCompatActivity {
         Matrix matrix = new Matrix();
         matrix.postRotate(angle);
         return Bitmap.createBitmap(source, 0, 0, source.getWidth(), source.getHeight(), matrix, true);
-    }
-
-    private File simpanBitmapKeFileSementara(Bitmap bitmap, String namaFile, int quality) {
-        File file = new File(getCacheDir(), namaFile);
-        try (FileOutputStream out = new FileOutputStream(file)) {
-            bitmap.compress(Bitmap.CompressFormat.JPEG, quality, out);
-            return file;
-        } catch (IOException e) {
-            Log.e(TAG, "Gagal menyimpan bitmap ke file sementara", e);
-            return null;
-        }
-    }
-
-    private File simpanByteKeFileSementara(byte[] data) {
-        File fileOutput = new File(getCacheDir(), "hasil_kompresi.rle");
-        try (FileOutputStream fos = new FileOutputStream(fileOutput)) {
-            fos.write(data);
-            return fileOutput;
-        } catch (IOException e) {
-            Log.e(TAG, "Gagal menyimpan byte array ke file sementara", e);
-            return null;
-        }
     }
 }
