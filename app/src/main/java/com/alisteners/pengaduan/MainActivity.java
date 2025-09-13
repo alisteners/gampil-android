@@ -192,12 +192,18 @@ public class MainActivity extends AppCompatActivity {
             } else if (itemId == R.id.nav_profil) {
                 selectedFragment = new ProfilFragment();
             } else if (itemId == R.id.nav_lapor) {
-                // Pilih Dari Galeri
+                // >> MODE 1: DEVELOPER (Untuk Analisis Skripsi)
+                // Menampilkan dialog untuk memilih antara Kamera atau Galeri.
                 tampilkanDialogPilihGambar();
 
-                // Langsung cek izin dan buka kamera.
-//                if (checkAndRequestCameraPermission()) {
-//                    bukaKameraInternal();}
+                // >> MODE 2: PRODUKSI (Untuk Pengguna Akhir)
+                // Langsung membuka kamera. Hapus atau beri komentar pada baris di atas,
+                // lalu hapus komentar pada blok di bawah ini.
+                /*
+                if (checkAndRequestCameraPermission()) {
+                    bukaKameraInternal();
+                }
+                */
                 return false;
             } else if (itemId == R.id.nav_notifikasi) {
                 selectedFragment = new NotifikasiFragment();
