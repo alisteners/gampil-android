@@ -38,6 +38,7 @@ public class RLECompressor {
         int[] grayscalePixels = new int[width * height];
         int[] pixels = new int[width * height];
         try {
+            // Ekstrak semua data piksel dari bitmap
             bitmap.getPixels(pixels, 0, width, 0, 0, width, height);
         } catch (Exception e) {
             Log.e(TAG, "Gagal mendapatkan piksel dari bitmap: " + e.getMessage());
@@ -68,22 +69,20 @@ public class RLECompressor {
         if (grayscalePixels == null || grayscalePixels.length == 0) {
             return grayscalePixels;
         }
-        if (numLevels <= 0 || numLevels > 256) {
+        // Validasi untuk memastikan numLevels berada dalam rentang yang wajar
+        if (numLevels <= 1 || numLevels >= 256) {
             return grayscalePixels;
         }
-        if (numLevels == 256) {
-            return grayscalePixels;
-        }
+
         int[] quantizedPixels = new int[grayscalePixels.length];
         double step = 256.0 / numLevels;
         for (int i = 0; i < grayscalePixels.length; i++) {
             int originalValue = grayscalePixels[i];
+            // Tentukan di "ember" (level) mana piksel ini berada
             int levelIndex = (int) (originalValue / step);
-            if (levelIndex >= numLevels) {
-                levelIndex = numLevels - 1;
-            }
-            // Menentukan nilai representatif baru berdasarkan levelnya
+            // Menentukan nilai representatif baru berdasarkan levelnya (nilai tengah dari rentang level)
             int quantizedValue = (int) (levelIndex * step + (step / 2.0));
+            // Pastikan nilai tetap dalam rentang 0-255
             quantizedPixels[i] = Math.max(0, Math.min(255, quantizedValue));
         }
         return quantizedPixels;
@@ -105,16 +104,20 @@ public class RLECompressor {
         List<MyPair<Integer, Integer>> compressedData = new ArrayList<>();
         int count = 1;
         int currentPixel = grayscalePixels[0];
+        // Iterasi dimulai dari elemen kedua untuk dibandingkan dengan yang pertama
         for (int i = 1; i < grayscalePixels.length; i++) {
             if (grayscalePixels[i] == currentPixel) {
+                // Jika piksel sama, tambah hitungan
                 count++;
             } else {
+                // Jika piksel berbeda, simpan pasangan (nilai, hitungan) sebelumnya
                 compressedData.add(new MyPair<>(currentPixel, count));
+                // Reset untuk piksel baru
                 currentPixel = grayscalePixels[i];
                 count = 1;
             }
         }
-        // Tambahkan data terakhir yang sedang dihitung
+        // Jangan lupa tambahkan data terakhir yang sedang dihitung setelah loop selesai
         compressedData.add(new MyPair<>(currentPixel, count));
         return compressedData;
     }
@@ -141,13 +144,15 @@ public class RLECompressor {
             int pixelValue = pair.first();
             int count = pair.second();
 
-            // Menangani kasus jika jumlah kemunculan lebih dari 255 (batas 1 byte)
-            // dengan memecahnya menjadi beberapa segmen.
+            // Logika ini penting jika ada urutan piksel yang sama lebih dari 255 kali.
+            // Contoh: jika ada 300 piksel hitam, akan dipecah menjadi (hitam, 255) dan (hitam, 45).
             while (count > 0) {
                 int currentRun = Math.min(count, 255);
 
-                baos.write((byte) pixelValue);    // 1. Tulis nilai piksel
-                baos.write((byte) currentRun);    // 2. Tulis jumlah kemunculan
+                // Tulis nilai piksel (1 byte)
+                baos.write((byte) pixelValue);
+                // Tulis jumlah kemunculan (1 byte)
+                baos.write((byte) currentRun);
 
                 count -= currentRun;
             }

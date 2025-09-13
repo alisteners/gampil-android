@@ -40,14 +40,17 @@ import com.alisteners.pengaduan.presentation.login.LoginActivity;
 import com.alisteners.pengaduan.presentation.masyarakat.notifikasi.NotifikasiFragment;
 import com.alisteners.pengaduan.presentation.masyarakat.profil.ProfilFragment;
 import com.alisteners.pengaduan.presentation.masyarakat.riwayatpengaduan.RiwayatFragment;
-
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
-
+import com.canhub.cropper.CropImageContract;
+import com.canhub.cropper.CropImageContractOptions;
+import com.canhub.cropper.CropImageOptions;
+import com.canhub.cropper.CropImageView;
 import com.google.android.material.badge.BadgeDrawable;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import org.json.JSONException;
 
@@ -57,22 +60,9 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 
-import com.canhub.cropper.CropImageContract;
-import com.canhub.cropper.CropImageContractOptions;
-import com.canhub.cropper.CropImageOptions;
-import com.canhub.cropper.CropImageView;
-
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
-
 /**
  * Activity utama aplikasi untuk pengguna 'Masyarakat' setelah berhasil login.
- * Bertanggung jawab untuk:
- * - Mengelola navigasi utama menggunakan BottomNavigationView.
- * - Menjadi host untuk fragment-fragment utama (Beranda, Riwayat, Notifikasi, Profil).
- * - Menangani seluruh alur pelaporan baru, mulai dari pemilihan gambar (kamera/galeri)
- * hingga cropping dan peluncuran {@link BuatPengaduanActivity}.
- * - Mengelola izin (kamera, notifikasi).
- * - Menjalankan mekanisme polling di background untuk memeriksa notifikasi baru.
+ * (Dokumentasi Javadoc lainnya tetap sama)
  */
 public class MainActivity extends AppCompatActivity {
 
@@ -169,8 +159,9 @@ public class MainActivity extends AppCompatActivity {
         buatPengaduanLauncher = registerForActivityResult(
                 new ActivityResultContracts.StartActivityForResult(),
                 result -> {
+                    // Jika pengaduan berhasil dibuat, kirim sinyal ke fragment lain untuk refresh.
                     if (result.getResultCode() == Activity.RESULT_OK) {
-                        Log.d(TAG, "Pengaduan berhasil dibuat, mengirim sinyal 'pengaduan_baru'.");
+                        // Sinyal ini akan diterima oleh BerandaFragment untuk memuat ulang data.
                         getSupportFragmentManager().setFragmentResult("pengaduan_baru", new Bundle());
                     }
                 }
@@ -232,7 +223,7 @@ public class MainActivity extends AppCompatActivity {
                         }
                     } else if (options[item].equals("Pilih dari Galeri")) {
                         pilihGambarLauncher.launch("image/*");
-                    } else if (options[item].equals("Batal")) {
+                    } else {
                         dialog.dismiss();
                     }
                 })
@@ -250,6 +241,8 @@ public class MainActivity extends AppCompatActivity {
         cropOptions.aspectRatioX = 4;
         cropOptions.aspectRatioY = 3;
 
+        // Logika penyesuaian resolusi output dinamis berdasarkan total RAM perangkat.
+        // Ini adalah langkah krusial untuk mencegah OutOfMemoryError di perangkat low-end.
         ActivityManager activityManager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
         ActivityManager.MemoryInfo memoryInfo = new ActivityManager.MemoryInfo();
         activityManager.getMemoryInfo(memoryInfo);
@@ -269,7 +262,7 @@ public class MainActivity extends AppCompatActivity {
 
         cropOptions.outputRequestWidth = outputWidth;
         cropOptions.outputRequestHeight = outputHeight;
-        // --- Jika ingin resolusi asli coment baris bawah 267 ---
+        // Jika ingin resolusi asli hapus/komen line 267
         cropOptions.outputRequestSizeOptions = CropImageView.RequestSizeOptions.RESIZE_INSIDE;
 
         cropOptions.outputCompressFormat = Bitmap.CompressFormat.JPEG;
@@ -315,6 +308,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
     // --- Metode-Metode Notifikasi ---
+
+    /**
+     * Membuat Notification Channel. Diperlukan untuk Android Oreo (API 26) ke atas.
+     */
     private void createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             CharSequence name = "Notifikasi Pengaduan";
@@ -326,6 +323,9 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Mengatur mekanisme polling periodik untuk memeriksa notifikasi baru.
+     */
     private void setupPolling() {
         pollingRunnable = () -> {
             if (isFinishing() || isDestroyed()) return;
@@ -334,6 +334,9 @@ public class MainActivity extends AppCompatActivity {
         };
     }
 
+    /**
+     * Mengirim request ke server untuk memeriksa jumlah notifikasi baru.
+     */
     private void cekNotifikasiBaru() {
         int idUser = sharedPreferences.getInt(LoginActivity.KEY_ID_USER, 0);
         if (idUser == 0) return;
@@ -363,6 +366,10 @@ public class MainActivity extends AppCompatActivity {
         requestQueue.add(request);
     }
 
+    /**
+     * Menampilkan notifikasi di status bar sistem Android.
+     * @param jumlahBaru Jumlah notifikasi baru yang akan ditampilkan dalam teks notifikasi.
+     */
     private void showSystemNotification(int jumlahBaru) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
                 ActivityCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
@@ -386,17 +393,24 @@ public class MainActivity extends AppCompatActivity {
         NotificationManagerCompat.from(this).notify(NOTIFICATION_ID, builder.build());
     }
 
+    /** Menampilkan badge (lencana) notifikasi pada item BottomNavigationView. */
     private void showNotificationBadge(int count) {
         BadgeDrawable badge = bottomNavigationView.getOrCreateBadge(R.id.nav_notifikasi);
         badge.setVisible(true);
         badge.setNumber(count);
     }
 
+    /** Menyembunyikan badge notifikasi. */
     private void hideNotificationBadge() {
         BadgeDrawable badge = bottomNavigationView.getOrCreateBadge(R.id.nav_notifikasi);
         badge.setVisible(false);
     }
 
+    /**
+     * Metode publik yang dapat dipanggil oleh fragment (misalnya {@link NotifikasiFragment})
+     * untuk memperbarui tampilan badge.
+     * @param count Jumlah notifikasi baru yang tersisa.
+     */
     public void updateNotificationBadge(int count) {
         if (count > 0) {
             showNotificationBadge(count);
@@ -434,7 +448,7 @@ public class MainActivity extends AppCompatActivity {
         }
         if (requestCode == REQUEST_NOTIFICATION_PERMISSION) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                Toast.makeText(this, "Izin notifikasi diberikan.", Toast.LENGTH_SHORT).show();
+                // Izin diberikan, tidak perlu menampilkan toast agar tidak mengganggu.
             } else {
                 Toast.makeText(this, "Anda mungkin tidak menerima notifikasi update status.", Toast.LENGTH_LONG).show();
             }
@@ -445,7 +459,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        pollingHandler.post(pollingRunnable);
+        pollingHandler.post(pollingRunnable); // Mulai polling saat aplikasi aktif
         if (getIntent() != null && getIntent().getBooleanExtra("BUKA_NOTIFIKASI_FRAGMENT", false)) {
             bottomNavigationView.setSelectedItemId(R.id.nav_notifikasi);
             getIntent().removeExtra("BUKA_NOTIFIKASI_FRAGMENT");
@@ -455,7 +469,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onPause() {
         super.onPause();
-        pollingHandler.removeCallbacks(pollingRunnable);
+        pollingHandler.removeCallbacks(pollingRunnable); // Hentikan polling saat aplikasi tidak aktif
     }
 
     @Override

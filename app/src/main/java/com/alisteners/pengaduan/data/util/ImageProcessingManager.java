@@ -57,43 +57,45 @@ public class ImageProcessingManager {
      * @throws IOException Jika terjadi error saat pemrosesan atau penyimpanan file ke cache.
      */
     public ProcessingResult processAndCompressImage(Bitmap bitmapUntukDiolah, long ukuranFileAsliBytes, PengaduanData dataAwal) throws IOException {
+        // Catat waktu mulai untuk menghitung durasi proses
         long startTime = System.currentTimeMillis();
         final int bitmapWidth = bitmapUntukDiolah.getWidth();
         final int bitmapHeight = bitmapUntukDiolah.getHeight();
         final int ukuranAsli = (int) ukuranFileAsliBytes;
 
-        // 1. Konversi ke Grayscale (di RAM)
+        // Langkah 1: Ubah gambar menjadi grayscale
         int[] grayscalePixels = RLECompressor.convertBitmapToGrayscale(bitmapUntukDiolah);
         if (grayscalePixels.length == 0) throw new IOException("Gagal konversi ke grayscale.");
-        final int ukuranByteDataGrayscale = grayscalePixels.length;
+        final int ukuranByteDataGrayscale = grayscalePixels.length; // Ukuran data mentah grayscale (W x H x 1 byte)
 
-        // 2. Kuantisasi (di RAM)
+        // Langkah 2: Kurangi jumlah warna (kuantisasi) untuk meningkatkan efektivitas RLE
         int jumlahLevelQuantisasi = 8;
         int[] quantizedPixels = RLECompressor.quantizeGrayscale(grayscalePixels, jumlahLevelQuantisasi);
         if (quantizedPixels.length == 0) throw new IOException("Gagal melakukan kuantisasi.");
 
-        // 3. Kompresi RLE (di RAM)
+        // Langkah 3: Lakukan kompresi RLE pada data yang sudah dikuantisasi
         final List<MyPair<Integer, Integer>> compressedDataRLE = RLECompressor.compressRLE(quantizedPixels);
 
-        // 4. Konversi hasil RLE ke format biner (byte[]) (di RAM)
+        // Langkah 4: Ubah hasil RLE menjadi format biner (byte array)
         final byte[] dataRLEBiner = RLECompressor.convertRleListToBinary(compressedDataRLE);
         final int ukuranFileRLEByte = dataRLEBiner.length;
 
-        // 5. Logika Smart-Compression (Perbandingan Cepat di RAM)
+        // Langkah 5: Logika Smart-Compression. Bandingkan hasil RLE dengan data grayscale mentah.
+        // Jika RLE lebih besar, maka lebih baik mengirim grayscale dalam format JPG.
         boolean pakaiRle = ukuranFileRLEByte < ukuranByteDataGrayscale;
         Log.d(TAG, "Keputusan Smart-Compression -> " + (pakaiRle ? "Gunakan RLE" : "Gunakan Grayscale (JPG)"));
 
         File fileDataUntukUpload;
         int ukuranDataTerkirim;
 
-        // --- HANYA SATU KALI OPERASI TULIS FILE (I/O) KE DISK BERDASARKAN KEPUTUSAN ---
+        // Hanya lakukan satu kali operasi penulisan file ke disk berdasarkan keputusan
         if (pakaiRle) {
-            // Skenario A: RLE efisien, simpan data .rle
+            // Skenario A: RLE efisien. Simpan data biner .rle ke file sementara.
             fileDataUntukUpload = simpanByteKeFileSementara(dataRLEBiner);
             if (fileDataUntukUpload == null) throw new IOException("Gagal menyimpan data RLE biner ke file.");
             ukuranDataTerkirim = ukuranFileRLEByte;
         } else {
-            // Skenario B: RLE tidak efisien, simpan gambar grayscale sebagai fallback .jpg
+            // Skenario B: RLE tidak efisien. Buat Bitmap dari data grayscale dan simpan sebagai JPG (fallback).
             Bitmap bitmapGrayscale = Bitmap.createBitmap(bitmapWidth, bitmapHeight, Bitmap.Config.ARGB_8888);
             int[] colorPixelsGrayscale = new int[grayscalePixels.length];
             for (int i = 0; i < grayscalePixels.length; i++) {
@@ -102,25 +104,25 @@ public class ImageProcessingManager {
             }
             bitmapGrayscale.setPixels(colorPixelsGrayscale, 0, bitmapWidth, 0, 0, bitmapWidth, bitmapHeight);
 
-            fileDataUntukUpload = simpanBitmapKeFileSementara(bitmapGrayscale, "fallback_grayscale.jpg", 85); // Kualitas 85%
+            fileDataUntukUpload = simpanBitmapKeFileSementara(bitmapGrayscale, "fallback_grayscale.jpg", 85);
             if (fileDataUntukUpload == null) throw new IOException("Gagal menyimpan fallback grayscale JPG ke file.");
             ukuranDataTerkirim = (int) fileDataUntukUpload.length();
         }
 
-        // Simpan thumbnail untuk ditampilkan di aplikasi (selalu dalam format JPG)
+        // Selalu buat dan simpan thumbnail berkualitas baik untuk ditampilkan di daftar laporan.
         File fileThumbnail = simpanBitmapKeFileSementara(bitmapUntukDiolah, "thumbnail.jpg", 90);
         if (fileThumbnail == null) throw new IOException("Gagal menyimpan file thumbnail.");
 
-        // Ambil ukuran Bitmap teoritis di RAM untuk tujuan analisis di Detail Pengaduan
+        // Ambil ukuran Bitmap di memori untuk data analisis
         final int ukuranBitmapSetelahResize = bitmapUntukDiolah.getByteCount();
 
-        // Hitung metrik akhir
+        // Hitung semua metrik akhir untuk analisis
         final double rasioHematRuang = (ukuranAsli > 0) ? (1.0 - ((double) ukuranDataTerkirim / (double) ukuranAsli)) * 100.0 : 0.0;
         final double rasioKompresiStandar = (ukuranAsli > 0) ? ((double) ukuranDataTerkirim / (double) ukuranAsli) * 100.0 : 0.0;
         long endTime = System.currentTimeMillis();
         long durationMs = endTime - startTime;
 
-        // Siapkan data lengkap untuk dikirim
+        // Siapkan objek PengaduanData yang sudah lengkap dengan semua metrik
         PengaduanData pengaduanDataLengkap = new PengaduanData(
                 dataAwal.idUser, dataAwal.lokasi, dataAwal.kategori, dataAwal.deskripsi, pakaiRle,
                 dataAwal.latitude, dataAwal.longitude,
