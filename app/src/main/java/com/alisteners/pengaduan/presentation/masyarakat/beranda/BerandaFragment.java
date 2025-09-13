@@ -2,7 +2,6 @@ package com.alisteners.pengaduan.presentation.masyarakat.beranda;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -153,7 +152,6 @@ public class BerandaFragment extends Fragment {
             } else if (checkedId == R.id.chipSelesai) {
                 filterStatusAktif = "selesai";
             }
-            Log.d(TAG, "Filter diubah menjadi: " + filterStatusAktif);
             loadData(true); // Muat ulang data dengan filter baru dan tampilkan loading.
         });
 
@@ -205,7 +203,8 @@ public class BerandaFragment extends Fragment {
                     // Kondisi jika data berhasil dimuat.
                     recyclerView.setVisibility(View.VISIBLE);
                     layoutPesan.setVisibility(View.GONE);
-                    String jumlahText = "Menampilkan " + pengaduanList.size() + " Laporan";
+
+                    String jumlahText = "Menampilkan " + pengaduanList.size() + " Pengaduan Kerusakan Infrastruktur";
                     textViewJumlahLaporan.setText(jumlahText);
                     textViewJumlahLaporan.setVisibility(View.VISIBLE);
                 }
@@ -215,7 +214,6 @@ public class BerandaFragment extends Fragment {
         viewModel.errorMessage.observe(getViewLifecycleOwner(), error -> {
             if (error != null && !error.isEmpty()) {
                 // Kondisi jika terjadi error saat mengambil data.
-                Log.e(TAG, "Observer: Menerima pesan error: " + error);
                 recyclerView.setVisibility(View.GONE);
                 textViewJumlahLaporan.setVisibility(View.GONE);
                 layoutPesan.setVisibility(View.VISIBLE);
@@ -232,7 +230,6 @@ public class BerandaFragment extends Fragment {
      */
     private void setupFragmentResultListener() {
         getParentFragmentManager().setFragmentResultListener("pengaduan_baru", this, (requestKey, bundle) -> {
-            Log.d(TAG, "Menerima sinyal 'pengaduan_baru', memuat ulang data.");
             if (chipGroupFilter != null) {
                 chipGroupFilter.check(R.id.chipSemua); // Kembali ke filter "Semua".
             }
