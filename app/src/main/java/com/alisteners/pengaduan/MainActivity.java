@@ -246,7 +246,10 @@ public class MainActivity extends AppCompatActivity {
         cropOptions.aspectRatioX = 4;
         cropOptions.aspectRatioY = 3;
 
-        // Logika penyesuaian resolusi berdasarkan RAM perangkat
+        // --- PERUBAHAN DI SINI ---
+        // Blok kode untuk penyesuaian resolusi dinamis berdasarkan RAM dinonaktifkan
+        // dengan cara diberi komentar. Ini akan membuat cropper menggunakan resolusi asli.
+        /*
         ActivityManager activityManager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
         ActivityManager.MemoryInfo memoryInfo = new ActivityManager.MemoryInfo();
         activityManager.getMemoryInfo(memoryInfo);
@@ -267,6 +270,8 @@ public class MainActivity extends AppCompatActivity {
         cropOptions.outputRequestWidth = outputWidth;
         cropOptions.outputRequestHeight = outputHeight;
         cropOptions.outputRequestSizeOptions = CropImageView.RequestSizeOptions.RESIZE_INSIDE;
+        */
+        // --- AKHIR PERUBAHAN ---
 
         cropOptions.outputCompressFormat = Bitmap.CompressFormat.JPEG;
         cropOptions.outputCompressQuality = 90;
