@@ -124,11 +124,13 @@ public class ImageProcessingManager {
 
         // Siapkan objek PengaduanData yang sudah lengkap dengan semua metrik
         PengaduanData pengaduanDataLengkap = new PengaduanData(
-                dataAwal.idUser, dataAwal.lokasi, dataAwal.kategori, dataAwal.deskripsi, pakaiRle,
+                dataAwal.idUser, dataAwal.lokasi, dataAwal.kategori, dataAwal.deskripsi,
+                dataAwal.pernyataan, 
                 dataAwal.latitude, dataAwal.longitude,
                 bitmapWidth, bitmapHeight, ukuranAsli, ukuranBitmapSetelahResize,
                 ukuranByteDataGrayscale, ukuranDataTerkirim, rasioHematRuang,
-                rasioKompresiStandar, durationMs, dataAwal.pernyataan);
+                rasioKompresiStandar, durationMs,
+                pakaiRle); // Argumen terakhir: isRleCompressed (boolean)
 
         return new ProcessingResult(fileDataUntukUpload, fileThumbnail, pengaduanDataLengkap);
     }
