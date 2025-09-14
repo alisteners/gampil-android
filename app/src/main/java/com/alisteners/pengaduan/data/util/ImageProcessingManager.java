@@ -43,10 +43,31 @@ public class ImageProcessingManager {
         final int ukuranByteDataGrayscale = grayscalePixels.length;
 
         // Langkah 2: Kurangi jumlah warna (kuantisasi) untuk meningkatkan efektivitas RLE
-        // UBAH NILAI INI MENJADI 0 UNTUK EKSPERIMEN ANDA
-        int jumlahLevelQuantisasi = 0;
-        int[] quantizedPixels = RLECompressor.quantizeGrayscale(grayscalePixels, jumlahLevelQuantisasi);
-        if (quantizedPixels.length == 0) throw new IOException("Gagal melakukan kuantisasi.");
+        // --- PERUBAHAN DI SINI: IMPLEMENTASI KUANTISASI ADAPTIF V2 ---
+        int[] quantizedPixels;
+        final long SATU_MB = 1024 * 1024;
+        final long LIMA_MB = 5 * SATU_MB;
+
+        if (ukuranAsli > LIMA_MB) {
+            // Untuk gambar > 5MB, TIDAK ADA KUANTISASI. Gunakan data grayscale asli.
+            quantizedPixels = grayscalePixels;
+            Log.d(TAG, "Ukuran file > 5MB. Kuantisasi Adaptif: DILEWATI (Level 256).");
+        } else {
+            // Untuk gambar di bawah 5MB, terapkan kuantisasi
+            int jumlahLevelQuantisasi;
+            if (ukuranAsli > SATU_MB) {
+                // Untuk gambar sedang (1MB - 5MB), gunakan kuantisasi standar
+                jumlahLevelQuantisasi = 8;
+                Log.d(TAG, "Ukuran file 1-5MB. Kuantisasi Adaptif: Level 8.");
+            } else {
+                // Untuk gambar kecil (< 1MB), gunakan kuantisasi yang lebih agresif
+                jumlahLevelQuantisasi = 4;
+                Log.d(TAG, "Ukuran file < 1MB. Kuantisasi Adaptif: Level 4.");
+            }
+            quantizedPixels = RLECompressor.quantizeGrayscale(grayscalePixels, jumlahLevelQuantisasi);
+            if (quantizedPixels.length == 0) throw new IOException("Gagal melakukan kuantisasi.");
+        }
+        // --- AKHIR PERUBAHAN ---
 
         // Langkah 3: Lakukan kompresi RLE pada data yang sudah dikuantisasi
         final List<MyPair<Integer, Integer>> compressedDataRLE = RLECompressor.compressRLE(quantizedPixels);
