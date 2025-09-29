@@ -12,7 +12,7 @@ public class ApiConfig {
      * Pastikan untuk mengganti alamat IP ini sesuai dengan alamat IP lokal server
      * saat menjalankan aplikasi di perangkat fisik yang terhubung ke jaringan yang sama.
      */
-    public static final String BASE_URL = "http://10.200.48.82/gampil-api/";
+    public static final String BASE_URL = "http://10.178.191.82/gampil-api/";
 
     // --- Endpoint untuk Fungsionalitas Pengguna (Masyarakat) ---
 
