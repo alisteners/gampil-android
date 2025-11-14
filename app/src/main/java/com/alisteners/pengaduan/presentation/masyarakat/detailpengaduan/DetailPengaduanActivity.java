@@ -28,6 +28,7 @@ import com.alisteners.pengaduan.domain.entity.LogStatusItem;
 import com.alisteners.pengaduan.domain.repository.PengaduanRepository;
 import com.alisteners.pengaduan.domain.usecase.GetDetailPengaduanUseCase;
 import com.alisteners.pengaduan.presentation.fullscreenimage.FullScreenImageActivity;
+import com.alisteners.pengaduan.data.util.SizeFormatter;
 
 // Import adapter yang sudah dibuat dari package operator
 import com.alisteners.pengaduan.presentation.operator.detail.LogStatusAdapter;
@@ -303,14 +304,9 @@ public class DetailPengaduanActivity extends AppCompatActivity {
         }
     }
 
-    private String formatUkuranBytes(long ukuranDalamBytes) {
-        if (ukuranDalamBytes < 1024) return ukuranDalamBytes + " B";
-        final double kilobyte = ukuranDalamBytes / 1024.0;
-        if (kilobyte < 1024) {
-            return new DecimalFormat("#,##0.00").format(kilobyte) + " KB";
-        }
-        final double megabyte = kilobyte / 1024.0;
-        return new DecimalFormat("#,##0.00").format(megabyte) + " MB";
+    private String formatUkuranBytes(long bytes) {
+        // Memanggil helper terpusat kita yang menggunakan Basis 1024
+        return SizeFormatter.formatUkuranBiner(bytes);
     }
 
     @Override
