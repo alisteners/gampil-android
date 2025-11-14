@@ -33,12 +33,14 @@ import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.Spinner;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.alisteners.pengaduan.presentation.login.LoginActivity;
 import com.alisteners.pengaduan.R;
 import com.alisteners.pengaduan.data.repository.PengaduanRepositoryImpl;
 import com.alisteners.pengaduan.data.util.ImageProcessingManager;
+import com.alisteners.pengaduan.data.util.SizeFormatter;
 import com.alisteners.pengaduan.domain.entity.PengaduanData;
 import com.alisteners.pengaduan.domain.repository.PengaduanRepository;
 import com.alisteners.pengaduan.domain.usecase.KirimPengaduanUseCase;
@@ -72,6 +74,7 @@ public class BuatPengaduanActivity extends AppCompatActivity {
 
     // --- Deklarasi Komponen UI ---
     private ImageView imageViewFotoPengaduan;
+    private TextView tvUkuranAsliPreview;
     private EditText editTextLokasiOtomatis, editTextDetailLokasiManual, editTextDeskripsi;
     private Spinner spinnerKategori;
     private CheckBox checkboxPernyataan;
@@ -119,6 +122,7 @@ public class BuatPengaduanActivity extends AppCompatActivity {
     private void inisialisasiView() {
         ImageButton buttonKembali = findViewById(R.id.buttonKembali);
         imageViewFotoPengaduan = findViewById(R.id.imageViewFotoPengaduan);
+        tvUkuranAsliPreview = findViewById(R.id.tv_ukuran_asli_preview);
         editTextLokasiOtomatis = findViewById(R.id.editTextLokasiOtomatis);
         ImageButton buttonRefreshLokasi = findViewById(R.id.buttonRefreshLokasi);
         editTextDetailLokasiManual = findViewById(R.id.editTextDetailLokasiManual);
@@ -184,11 +188,18 @@ public class BuatPengaduanActivity extends AppCompatActivity {
      * Memproses data (URI gambar dan ukuran file) yang dikirim dari Activity sebelumnya,
      * lalu memulai permintaan lokasi.
      */
+    @SuppressLint("SetTextI18n")
     private void handleIncomingPhotoAndLocation() {
         Intent intent = getIntent();
         if (intent != null) {
             ukuranFileAsliBytes = intent.getLongExtra("ORIGINAL_FILE_SIZE", 0);
             Log.d(TAG, "Ukuran File Asli diterima: " + ukuranFileAsliBytes + " bytes");
+
+            // --- REVISI SHP: TAMPILKAN UKURAN ASLI ---
+            String ukuranAsliFormatted = SizeFormatter.formatUkuranBiner(ukuranFileAsliBytes);
+            tvUkuranAsliPreview.setText("Ukuran Sebelum Upload : " + ukuranAsliFormatted);
+            tvUkuranAsliPreview.setVisibility(View.VISIBLE);
+            // --- AKHIR REVISI ---
 
             if (intent.hasExtra("PHOTO_URI")) {
                 Uri photoUri = Uri.parse(intent.getStringExtra("PHOTO_URI"));

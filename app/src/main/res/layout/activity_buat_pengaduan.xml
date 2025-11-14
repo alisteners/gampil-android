@@ -97,6 +97,21 @@
                     android:scaleType="centerCrop"
                     android:src="@drawable/ic_image_placeholder"
                     android:contentDescription="@string/foto_bukti_kondisi"/>
+
+                <TextView
+                    android:id="@+id/tv_ukuran_asli_preview"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_horizontal"
+                    android:layout_marginTop="8dp"
+                    android:fontFamily="@font/poppins_regular"
+                    android:text="Ukuran Sebelum Upload : 6.64 MB"
+                    android:textAppearance="?attr/textAppearanceCaption"
+                    android:textColor="@color/black"
+                    android:visibility="gone"
+                    tools:visibility="visible"
+                    tools:ignore="HardcodedText" />
+
                 <Button
                     android:id="@+id/buttonAmbilFoto"
                     android:layout_width="wrap_content"
