@@ -37,6 +37,13 @@ public class PengaduanData {
     /** Flag yang menandakan apakah file akhir dikompresi menggunakan RLE (true) atau fallback JPG (false). */
     public final boolean isRleCompressed;
 
+    // --- TAMBAHAN VALIDASI NASKAH (REVISI SHP) ---
+    /** Ukuran sampel 8x8 RGB sebelum kompresi (sesuai naskah, 192 bytes). */
+    public final int ukuranNaskahSebelum;
+    /** Ukuran sampel 8x8 setelah kompresi RLE (sesuai naskah, misal 92 bytes). */
+    public final int ukuranNaskahSesudah;
+    // --- AKHIR TAMBAHAN ---
+
     /**
      * Konstruktor lengkap untuk membuat objek PengaduanData dengan semua informasi,
      * termasuk metrik analisis gambar yang sudah dihitung.
@@ -65,7 +72,7 @@ public class PengaduanData {
                          boolean pernyataan, double latitude, double longitude,
                          int lebar, int tinggi, int ukuranBitmapAsli, int ukuranBitmapSetelahResize, int ukuranGrayscale,
                          int ukuranFileRLEByte, double rasioKompresiRLE, double rasioKompresiStandar,
-                         long waktuProsesGambarMs, boolean isRleCompressed) {
+                         long waktuProsesGambarMs, boolean isRleCompressed, int ukuranNaskahSebelum, int ukuranNaskahSesudah) {
         this.idUser = idUser;
         this.lokasi = lokasi;
         this.kategori = kategori;
@@ -83,6 +90,8 @@ public class PengaduanData {
         this.rasioKompresiStandar = rasioKompresiStandar;
         this.waktuProsesGambarMs = waktuProsesGambarMs;
         this.isRleCompressed = isRleCompressed;
+        this.ukuranNaskahSebelum = ukuranNaskahSebelum;
+        this.ukuranNaskahSesudah = ukuranNaskahSesudah;
     }
 
     /**
@@ -119,5 +128,7 @@ public class PengaduanData {
         this.rasioKompresiRLE = 0.0;
         this.rasioKompresiStandar = 0.0;
         this.waktuProsesGambarMs = 0;
+        this.ukuranNaskahSebelum = 0;
+        this.ukuranNaskahSesudah = 0;
     }
 }

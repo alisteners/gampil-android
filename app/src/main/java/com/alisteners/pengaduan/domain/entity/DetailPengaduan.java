@@ -75,11 +75,29 @@ public class DetailPengaduan {
     @SerializedName("waktuProsesGambarMs")
     public long waktuProsesGambarMs;
 
+    // --- TAMBAHAN VALIDASI NASKAH (REVISI SHP) ---
+    @SerializedName("ukuranNaskahSebelum")
+    public int ukuranNaskahSebelum;
+
+    @SerializedName("ukuranNaskahSesudah")
+    public int ukuranNaskahSesudah;
+    // --- AKHIR TAMBAHAN ---
+
     // --- Informasi Riwayat Tindak Lanjut ---
 
     /** Daftar (List) yang berisi riwayat status dan tindak lanjut dari pengaduan. */
     @SerializedName("riwayat_tindak_lanjut")
     public List<LogStatusItem> riwayatTindakLanjut;
+
+    // --- TAMBAHAN VALIDASI NASKAH (REVISI SHP) ---
+    public int getUkuranNaskahSebelum() {
+        return ukuranNaskahSebelum;
+    }
+
+    public int getUkuranNaskahSesudah() {
+        return ukuranNaskahSesudah;
+    }
+    // --- AKHIR TAMBAHAN ---
 
     /**
      * Konstruktor kosong.

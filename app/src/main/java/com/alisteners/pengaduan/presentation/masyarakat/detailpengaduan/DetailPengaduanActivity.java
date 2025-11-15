@@ -70,6 +70,11 @@ public class DetailPengaduanActivity extends AppCompatActivity {
             textViewDetailRasioStandar, textViewDetailWaktu;
     private TextView textViewRasioVsAsli, textViewRasioVsResize, textViewRasioVsGrayscale;
     private TextView textViewSpaceSavingVsAsli, textViewSpaceSavingVsResize, textViewSpaceSavingVsGrayscale;
+
+    // --- TAMBAHAN VALIDASI NASKAH (REVISI SHP) ---
+    private TextView tvNaskahSebelum, tvNaskahSesudah, tvNaskahRasio, tvNaskahHemat;
+    // --- AKHIR TAMBAHAN ---
+
     private RecyclerView recyclerViewLogStatus;
     private LogStatusAdapter logStatusAdapter;
 
@@ -133,6 +138,13 @@ public class DetailPengaduanActivity extends AppCompatActivity {
         textViewSpaceSavingVsResize = findViewById(R.id.textViewSpaceSavingVsResize);
         textViewSpaceSavingVsGrayscale = findViewById(R.id.textViewSpaceSavingVsGrayscale);
         recyclerViewLogStatus = findViewById(R.id.recyclerViewLogStatusMasyarakat);
+
+        // --- TAMBAHAN VALIDASI NASKAH (REVISI SHP) ---
+        tvNaskahSebelum = findViewById(R.id.tv_naskah_sebelum);
+        tvNaskahSesudah = findViewById(R.id.tv_naskah_sesudah);
+        tvNaskahRasio = findViewById(R.id.tv_naskah_rasio);
+        tvNaskahHemat = findViewById(R.id.tv_naskah_hemat);
+        // --- AKHIR TAMBAHAN ---
     }
 
     /**
@@ -267,6 +279,32 @@ public class DetailPengaduanActivity extends AppCompatActivity {
                 startActivity(intent);
             });
         }
+
+        // --- TAMPILKAN DATA VALIDASI NASKAH (REVISI SHP) ---
+        // Kita ambil data baru dari objek DetailPengaduan
+        long naskahSebelum = detail.getUkuranNaskahSebelum();
+        long naskahSesudah = detail.getUkuranNaskahSesudah();
+
+        // Cek apakah data ini ada (data lama di DB mungkin nilainya 0)
+        if (naskahSebelum > 0) {
+            tvNaskahSebelum.setText(String.format(Locale.US, "%d B", naskahSebelum));
+            tvNaskahSesudah.setText(String.format(Locale.US, "%d B", naskahSesudah));
+
+            // Lakukan perhitungan rasio di sini, sama seperti di "Mode Penelitian"
+            double rasioNaskah = hitungRasio(naskahSesudah, naskahSebelum);
+            double hematNaskah = hitungSpaceSaving(naskahSesudah, naskahSebelum);
+
+            tvNaskahRasio.setText(String.format(Locale.US, "%.2f %%", rasioNaskah));
+            tvNaskahHemat.setText(String.format(Locale.US, "%.2f %%", hematNaskah));
+        } else {
+            // Jika data tidak ada (data lama), kita sembunyikan saja teksnya
+            tvNaskahSebelum.setText("N/A");
+            tvNaskahSesudah.setText("N/A");
+            tvNaskahRasio.setText("N/A");
+            tvNaskahHemat.setText("N/A");
+        }
+        // --- AKHIR BLOK VALIDASI NASKAH ---
+
     }
 
     // --- Metode Helper ---

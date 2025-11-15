@@ -84,6 +84,10 @@ public class PengaduanRepositoryImpl implements PengaduanRepository, OperatorRep
         params.put("rasioKompresiStandar", createPartFromString(String.format(Locale.US, "%.2f", dataPengaduan.rasioKompresiStandar)));
         params.put("waktuProsesGambarMs", createPartFromString(String.valueOf(dataPengaduan.waktuProsesGambarMs)));
         params.put("isRleCompressed", createPartFromString(dataPengaduan.isRleCompressed ? "1" : "0"));
+        // --- TAMBAHAN VALIDASI NASKAH (REVISI SHP) ---
+        params.put("ukuran_naskah_sebelum", createPartFromString(String.valueOf(dataPengaduan.ukuranNaskahSebelum)));
+        params.put("ukuran_naskah_sesudah", createPartFromString(String.valueOf(dataPengaduan.ukuranNaskahSesudah)));
+        // --- AKHIR TAMBAHAN ---
 
         // 2. Membuat MultipartBody.Part untuk file data utama (bisa .rle atau .jpg)
         MultipartBody.Part fileDataPart = null;

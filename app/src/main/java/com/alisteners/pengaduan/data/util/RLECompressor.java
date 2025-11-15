@@ -159,4 +159,19 @@ public class RLECompressor {
         }
         return baos.toByteArray();
     }
+
+    /**
+     * Menghitung ukuran terkompresi RLE dalam byte.
+     * Setiap pasangan (nilai, jumlah) dianggap 2 byte.
+     * Sesuai dengan perhitungan naskah (Tabel 3.6).
+     *
+     * @param compressedList Daftar pasangan RLE.
+     * @return Ukuran total dalam byte.
+     */
+    public static long calculateCompressedSize(List<MyPair<Integer, Integer>> compressedList) {
+        // Setiap pasangan RLE (nilai, hitungan) disimpan sebagai 2 byte
+        // Ini sesuai dengan kesimpulan di naskah (misal 46 pasangan -> 92 byte)
+        return (long) compressedList.size() * 2;
+    }
+
 }

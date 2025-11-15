@@ -106,7 +106,7 @@
                     android:layout_marginTop="8dp"
                     android:fontFamily="@font/poppins_regular"
                     android:text="Ukuran Sebelum Upload : 6.64 MB"
-                    android:textAppearance="?attr/textAppearanceCaption"
+                    android:textAppearance="?attr/textAppearanceBody1"
                     android:textColor="@color/black"
                     android:visibility="gone"
                     tools:visibility="visible"

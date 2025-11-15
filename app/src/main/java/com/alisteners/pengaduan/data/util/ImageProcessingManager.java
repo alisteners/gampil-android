@@ -122,6 +122,9 @@ public class ImageProcessingManager {
         long endTime = System.currentTimeMillis();
         long durationMs = endTime - startTime;
 
+        // Panggil method validasi naskah 8x8
+        int[] hasilNaskah = hitungValidasiNaskah(bitmapUntukDiolah);
+
         // Siapkan objek PengaduanData yang sudah lengkap dengan semua metrik
         PengaduanData pengaduanDataLengkap = new PengaduanData(
                 dataAwal.idUser, dataAwal.lokasi, dataAwal.kategori, dataAwal.deskripsi,
@@ -130,7 +133,8 @@ public class ImageProcessingManager {
                 bitmapWidth, bitmapHeight, ukuranAsli, ukuranBitmapSetelahResize,
                 ukuranByteDataGrayscale, ukuranDataTerkirim, rasioHematRuang,
                 rasioKompresiStandar, durationMs,
-                pakaiRle); // Argumen terakhir: isRleCompressed (boolean)
+                pakaiRle, hasilNaskah[0],
+                hasilNaskah[1]);
 
         return new ProcessingResult(fileDataUntukUpload, fileThumbnail, pengaduanDataLengkap);
     }
@@ -170,4 +174,57 @@ public class ImageProcessingManager {
             return null;
         }
     }
+
+    /**
+     * Menjalankan perhitungan validasi naskah (studi kasus 8x8) secara terpisah.
+     * Metode ini secara spesifik meniru alur di BAB 3:
+     * 1. Mengambil sampel 8x8 piksel (64 piksel) dari pojok kiri atas.
+     * 2. Mengonversi 64 piksel RGB (192 byte) menjadi 64 piksel Grayscale (64 byte)
+     * menggunakan rumus RATA-RATA ( (R+G+B)/3 ), BUKAN rumus NTSC.
+     * 3. Mengompres 64 byte grayscale tersebut dengan RLE.
+     * 4. Mengembalikan ukuran sebelum (192 byte) dan ukuran sesudah (hasil RLE).
+     *
+     * @param bitmap Bitmap yang sudah di-resize (misal: 1600x1200).
+     * @return Array int[2] berisi {ukuranNaskahSebelum, ukuranNaskahSesudah}.
+     */
+    private int[] hitungValidasiNaskah(Bitmap bitmap) {
+        final int SAMPEL_SIZE = 8; // Matriks 8x8
+        // Sesuai naskah BAB 3, "Ukuran sebelum dikompresi = 192 byte" (data RGB 8x8x3)
+        final int UKURAN_NASKAH_SEBELUM = 192;
+
+        // Input untuk RLE adalah 64 byte grayscale (8x8x1)
+        int[] grayscaleSampel = new int[SAMPEL_SIZE * SAMPEL_SIZE]; // 64 piksel
+
+        try {
+            // 1. Ambil sampel 8x8 piksel
+            for (int y = 0; y < SAMPEL_SIZE; y++) {
+                for (int x = 0; x < SAMPEL_SIZE; x++) {
+                    int pixel = bitmap.getPixel(x, y);
+                    int r = Color.red(pixel);
+                    int g = Color.green(pixel);
+                    int b = Color.blue(pixel);
+
+                    // 2. Konversi ke Grayscale pakai RUMUS NASKAH (Average), BUKAN NTSC.
+                    int gray = (r + g + b) / 3;
+
+                    grayscaleSampel[(y * SAMPEL_SIZE) + x] = gray;
+                }
+            }
+
+            // 3. Kompres data sampel 64 piksel grayscale
+            List<MyPair<Integer, Integer>> rleSampel = RLECompressor.compressRLE(grayscaleSampel);
+
+            // 4. Hitung ukuran sesudah (sesuai naskah, 2 byte per pair)
+            // Panggil helper yang sudah dibuat di Fase 1
+            int ukuranNaskahSesudah = (int) RLECompressor.calculateCompressedSize(rleSampel);
+
+            return new int[]{UKURAN_NASKAH_SEBELUM, ukuranNaskahSesudah};
+
+        } catch (Exception e) {
+            Log.e(TAG, "Gagal menghitung validasi naskah 8x8", e);
+            // Return 0 jika gagal (misal gambar lebih kecil dari 8x8)
+            return new int[]{0, 0};
+        }
+    }
+
 }
